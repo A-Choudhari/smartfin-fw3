@@ -53,5 +53,12 @@ class ChargeTask : public Task{
      * the powering on of the device
      */
     system_tick_t startTime;
+
+    /**
+     * @brief Flag storing if data upload state successfully initializes.
+     * Variable storing 1 if system successfully enters data upload state, or 0
+     * if system times out before entering data upload state.
+     */
+    int initSuccess;
 };
 #endif

@@ -3,6 +3,7 @@
 #include "Particle.h"
 #include "cli/conio.hpp"
 #include "cli/flog.hpp"
+#include "cellular/sf_cloud.hpp"
 
 #include "system.hpp"
 #include "sleepTask.hpp"
@@ -20,6 +21,14 @@ void ChargeTask::init(void)
     this->ledStatus.setPriority(CHARGE_RGB_LED_PRIORITY);
     this->ledStatus.setActive();
     this->startTime = millis();
+
+    //referenced dataupload
+    this->initSuccess = 1;
+    if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS))
+    {
+        this->initSuccess = 0;
+    }
+    Particle.syncTime();
 }
 
 STATES_e ChargeTask::run(void)
@@ -57,6 +66,11 @@ STATES_e ChargeTask::run(void)
 
 void ChargeTask::exit(void)
 {
+    if (sf::cloud::wait_disconnect(5000))
+    {
+        FLOG_AddError(FLOG_CELL_DISCONN_FAIL, 0);
+    }
+
     pSystemDesc->pChargerCheck->stop();
     this->ledStatus.setActive(false);
 }
