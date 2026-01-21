@@ -28,6 +28,9 @@ void ChargeTask::init(void)
     {
         this->initSuccess = 0;
     }
+    else if(sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS) == 0){
+        this->ledStatus.setPattern(LED_PATTERN_BLINK);
+    }
     Particle.syncTime();
 }
 
