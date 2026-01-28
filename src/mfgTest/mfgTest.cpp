@@ -357,6 +357,7 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::cellular_test(void)
         delay(1);
     }
 
+    // put it as elapsed time and look into what the time measure
     json_writer.name("cellular").beginObject();
         json_writer.name("time").value(millis());
     json_writer.endObject();
