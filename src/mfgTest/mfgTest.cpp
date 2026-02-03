@@ -281,8 +281,8 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::imu_test(void)
     _print_axis("Gyr.Y", gyro_mean[1], gyro_std[1]);
     _print_axis("Gyr.Z", gyro_mean[2], gyro_std[2]);
     _print_axis("Mag.X", mag_mean[0], mag_std[0]);
-    _print_axis("Mag.X", mag_mean[1], mag_std[1]);
-    _print_axis("Mag.X", mag_mean[2], mag_std[2]);
+    _print_axis("Mag.Y", mag_mean[1], mag_std[1]);
+    _print_axis("Mag.Z", mag_mean[2], mag_std[2]);
 
     json_writer.name("imu").beginObject();
         json_writer.name("acc.X").beginObject();
