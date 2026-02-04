@@ -3,7 +3,9 @@
 
 #include "task.hpp"
 
-#include <spark_wiring_json.h>
+#ifndef PARTICLE
+    #include <spark_wiring_json.h>
+#endif
 
 #define MFG_MIN_VALID_TEMPERATURE 15
 #define MFG_MAX_VALID_TEMPERATURE   30
