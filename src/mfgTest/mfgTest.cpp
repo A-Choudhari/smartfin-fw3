@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <float.h>
 #include <stdint.h>
-#include <spark_wiring_json.h>
 
 MfgTest::mfg_test_entry MfgTest::MFG_TEST_TABLE[] = {
     {&MfgTest::wet_dry_sensor_test, "Wet/Dry Sensor", MfgTest::PENDING},
