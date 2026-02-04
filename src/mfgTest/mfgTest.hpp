@@ -3,7 +3,7 @@
 
 #include "task.hpp"
 
-#ifndef PARTICLE
+#ifdef PARTICLE
     #include <spark_wiring_json.h>
 #endif
 
@@ -70,8 +70,11 @@ private:
      */
     static mfg_test_entry MFG_TEST_TABLE[];
 
-    static char json_buffer[1024];
-    static spark::JSONBufferWriter json_writer;
+    // particle specific json writer object, so defined
+    #ifdef PARTICLE
+        static char json_buffer[1024];
+        static spark::JSONBufferWriter json_writer;
+    #endif
 
     /**
      * @brief Test the wet/dry sensor
