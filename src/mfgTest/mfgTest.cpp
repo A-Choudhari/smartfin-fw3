@@ -58,7 +58,9 @@ void MfgTest::run(void)
             #endif
             retval |= (int)(test_entry->pass);
         }
-        json_writer.endObject();
+        #ifdef PARTICLE
+            json_writer.endObject();
+        #endif
 
         if (retval)
         {
