@@ -2,6 +2,7 @@
 #define __MFGTEST_H__
 
 #include "task.hpp"
+
 #include <spark_wiring_json.h>
 
 #define MFG_MIN_VALID_TEMPERATURE 15
