@@ -2,7 +2,7 @@
 #define __MFGTEST_H__
 
 #include "task.hpp"
-#include <Particle.h>
+#include <spark_wiring_json.h>
 
 #define MFG_MIN_VALID_TEMPERATURE 15
 #define MFG_MAX_VALID_TEMPERATURE   30
@@ -68,7 +68,7 @@ private:
     static mfg_test_entry MFG_TEST_TABLE[];
 
     static char json_buffer[1024];
-    static JSONBufferWriter json_writer;
+    static spark::JSONBufferWriter json_writer;
 
     /**
      * @brief Test the wet/dry sensor

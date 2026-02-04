@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <float.h>
 #include <stdint.h>
+#include <spark_wiring_json.h>
 
 MfgTest::mfg_test_entry MfgTest::MFG_TEST_TABLE[] = {
     {&MfgTest::wet_dry_sensor_test, "Wet/Dry Sensor", MfgTest::PENDING},
@@ -22,7 +23,7 @@ MfgTest::mfg_test_entry MfgTest::MFG_TEST_TABLE[] = {
 
 char MfgTest::json_buffer[1024];
 
-JSONBufferWriter MfgTest::json_writer(MfgTest::json_buffer, sizeof(MfgTest::json_buffer));
+spark::JSONBufferWriter MfgTest::json_writer(MfgTest::json_buffer, sizeof(MfgTest::json_buffer));
 
 void MfgTest::run(void)
 {
