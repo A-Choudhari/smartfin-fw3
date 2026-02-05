@@ -398,7 +398,7 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::gps_test(void)
     SF_OSAL_printf("Location service pass" __NL__);
 
     #ifdef PARTICLE
-        json_writer.name("gps").endObject();
+        json_writer.name("gps").beginObject();
         json_writer.endObject();
     #endif
     return MfgTest::PASS;
