@@ -20,6 +20,11 @@ MfgTest::mfg_test_entry MfgTest::MFG_TEST_TABLE[] = {
     {&MfgTest::gps_test, "GPS", MfgTest::PENDING},
     {nullptr, nullptr, MfgTest::PENDING}};
 
+#ifdef PARTICLE
+    char MfgTest::json_buffer[1024];
+    spark::JSONBufferWriter MfgTest::json_writer(MfgTest::json_buffer, sizeof(MfgTest::json_buffer));
+#endif
+
 void MfgTest::run(void)
 {
     mfg_test_entry *test_entry = nullptr;
@@ -29,27 +34,47 @@ void MfgTest::run(void)
     SF_OSAL_printf("Starting Manufacturing Testing" __NL__);
     SF_OSAL_printf("Testing Device %s" __NL__, deviceID.c_str());
 
-    for (test_entry = MFG_TEST_TABLE; test_entry->fn; test_entry++)
-    {
-        test_entry->pass = (*test_entry->fn)();
-    }
+    #ifdef PARTICLE
+        json_writer.beginObject();
+        json_writer.name("device_id").value(deviceID.c_str());
+    #endif
+        for (test_entry = MFG_TEST_TABLE; test_entry->fn; test_entry++)
+        {
+            test_entry->pass = (*test_entry->fn)();
+        }
 
-    SF_OSAL_printf("| %24s | %16s |" __NL__, "Sensor", "Pass (0)/Fail (1)");
-    SF_OSAL_printf("|--------------------------|------------------|" __NL__);
-    for (test_entry = MFG_TEST_TABLE; test_entry->fn; test_entry++)
-    {
-        SF_OSAL_printf("| %24s | %16d |" __NL__, test_entry->name, test_entry->pass);
-        retval |= (int)(test_entry->pass);
-    }
+        SF_OSAL_printf("| %24s | %16s |" __NL__, "Sensor", "Pass (0)/Fail (1)");
+        SF_OSAL_printf("|--------------------------|------------------|" __NL__);
+        #ifdef PARTICLE
+            json_writer.name("results").beginObject();
+        #endif
+        for (test_entry = MFG_TEST_TABLE; test_entry->fn; test_entry++)
+        {
+            SF_OSAL_printf("| %24s | %16d |" __NL__, test_entry->name, test_entry->pass);
+            #ifdef PARTICLE
+                json_writer.name(test_entry->name)
+                .value(test_entry->pass 
+                    == MFG_TEST_RESULT_t::PASS ? "true" : "false");
+            #endif
+            retval |= (int)(test_entry->pass);
+        }
+        #ifdef PARTICLE
+            json_writer.endObject();
+        #endif
 
-    if (retval)
-    {
-        SF_OSAL_printf("Manufacturing Tests FAILED" __NL__ "Mark unit as scrap." __NL__);
-    }
-    else
-    {
-        SF_OSAL_printf("All tests passed." __NL__);
-    }
+        if (retval)
+        {
+            SF_OSAL_printf("Manufacturing Tests FAILED" __NL__ "Mark unit as scrap." __NL__);
+        }
+        else
+        {
+            SF_OSAL_printf("All tests passed." __NL__);
+        }
+    #ifdef PARTICLE
+        json_writer.endObject();
+
+        SF_OSAL_printf("Manufacturing Test JSON Output: %s" __NL__, MfgTest::json_buffer);
+    #endif
 }
 
 MfgTest::MFG_TEST_RESULT_t MfgTest::wet_dry_sensor_test(void)
@@ -69,7 +94,9 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::wet_dry_sensor_test(void)
     // set in-water
     digitalWrite(WATER_MFG_TEST_EN, HIGH);
 
-    SF_OSAL_printf("value: %d " , digitalRead(WATER_MFG_TEST_EN));
+    int wet_value = digitalRead(WATER_MFG_TEST_EN);
+
+    SF_OSAL_printf("value: %d " , wet_value);
 
     for (int i = 0; i < 100; i++)
     {
@@ -88,9 +115,10 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::wet_dry_sensor_test(void)
 
     // set out-of-water
     digitalWrite(WATER_MFG_TEST_EN, LOW);
-    SF_OSAL_printf("value: %d " , digitalRead(WATER_MFG_TEST_EN));
 
+    int dry_value = digitalRead(WATER_MFG_TEST_EN);
 
+    SF_OSAL_printf("value: %d " , dry_value);
 
     //Take 100 readings, then query the status
     for (int i = 0; i < 100; i++)
@@ -112,6 +140,12 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::wet_dry_sensor_test(void)
 
     pSystemDesc->pWaterCheck->start();
 
+    #ifdef PARTICLE
+        json_writer.name("wetDry").beginObject();
+            json_writer.name("wetValue").value(wet_value);
+            json_writer.name("dryValue").value(dry_value);
+        json_writer.endObject();
+    #endif
 
     return retval;
 }
@@ -121,7 +155,7 @@ float _std_dev(float x, float x2, std::size_t n)
     return sqrtf((n * x2 - x * x) / (n * (n - 1)));
 }
 
-MfgTest::MFG_TEST_RESULT_t MfgTest::temperature_sensor_test(void)
+MfgTest::MFG_TEST_RESULT_t MfgTest::temperature_sensor_test()
 {
     float temp;
     float temp_acc = 0;
@@ -150,11 +184,18 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::temperature_sensor_test(void)
     float temp_mean = temp_acc / nIterations;
     float temp_std = _std_dev(temp_acc, temp_acc2, nIterations);
 
-    if ((temp_mean < MFG_MIN_VALID_TEMPERATURE) || (temp_mean > MFG_MAX_VALID_TEMPERATURE))
-    {
-        SF_OSAL_printf("Temp failed: Temp %f" __NL__, temp_mean);
-        retval = MFG_TEST_RESULT_t::FAIL;
-    }
+    #ifdef PARTICLE
+        json_writer.name("temperature").beginObject();
+            json_writer.name("mean").value(temp_mean);
+            json_writer.name("stdDev").value(temp_std);
+        json_writer.endObject();
+    #endif
+
+        if ((temp_mean < MFG_MIN_VALID_TEMPERATURE) || (temp_mean > MFG_MAX_VALID_TEMPERATURE))
+        {
+            SF_OSAL_printf("Temp failed: Temp %f" __NL__, temp_mean);
+            retval = MFG_TEST_RESULT_t::FAIL;
+        }
 
     if (temp_std < 0.001)
     {
@@ -256,8 +297,50 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::imu_test(void)
     _print_axis("Gyr.Y", gyro_mean[1], gyro_std[1]);
     _print_axis("Gyr.Z", gyro_mean[2], gyro_std[2]);
     _print_axis("Mag.X", mag_mean[0], mag_std[0]);
-    _print_axis("Mag.X", mag_mean[1], mag_std[1]);
-    _print_axis("Mag.X", mag_mean[2], mag_std[2]);
+    _print_axis("Mag.Y", mag_mean[1], mag_std[1]);
+    _print_axis("Mag.Z", mag_mean[2], mag_std[2]);
+
+    #ifdef PARTICLE
+        json_writer.name("imu").beginObject();
+            json_writer.name("acc.X").beginObject();
+                json_writer.name("mean").value(accel_mean[0]);
+                json_writer.name("stdDev").value(accel_std[0]);
+            json_writer.endObject();
+            json_writer.name("acc.Y").beginObject();
+                json_writer.name("mean").value(accel_mean[1]);
+                json_writer.name("stdDev").value(accel_std[1]);
+            json_writer.endObject();
+            json_writer.name("acc.Z").beginObject();
+                json_writer.name("mean").value(accel_mean[2]);
+                json_writer.name("stdDev").value(accel_std[2]);
+            json_writer.endObject();
+            json_writer.name("gyr.X").beginObject();
+                json_writer.name("mean").value(gyro_mean[0]);
+                json_writer.name("stdDev").value(gyro_std[0]);
+            json_writer.endObject();
+            json_writer.name("gyr.Y").beginObject();
+                json_writer.name("mean").value(gyro_mean[1]);
+                json_writer.name("stdDev").value(gyro_std[1]);
+            json_writer.endObject();
+            json_writer.name("gyr.Z").beginObject();
+                json_writer.name("mean").value(gyro_mean[2]);
+                json_writer.name("stdDev").value(gyro_std[2]);
+            json_writer.endObject();
+            json_writer.name("mag.X").beginObject();
+                json_writer.name("mean").value(mag_mean[0]);
+                json_writer.name("stdDev").value(mag_std[0]);
+            json_writer.endObject();
+            json_writer.name("mag.Y").beginObject();
+                json_writer.name("mean").value(mag_mean[1]);
+                json_writer.name("stdDev").value(mag_std[1]);
+            json_writer.endObject();
+            json_writer.name("mag.Z").beginObject();
+                json_writer.name("mean").value(mag_mean[2]);
+                json_writer.name("stdDev").value(mag_std[2]);
+            json_writer.endObject();
+        json_writer.endObject();
+    #endif
+
     if (accel_mean[0] == 0 || accel_mean[1] == 0 || accel_mean[2] == 0)
     {
         return MfgTest::FAIL;
@@ -291,6 +374,14 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::cellular_test(void)
     {
         delay(1);
     }
+
+    #ifdef PARTICLE
+        // put it as elapsed time and look into what the time measure
+        json_writer.name("cellular").beginObject();
+            json_writer.name("time").value(millis());
+        json_writer.endObject();
+    #endif
+
     SF_OSAL_printf("Pass" __NL__);
     sf::cloud::wait_disconnect(MANUFACTURING_CELL_TIMEOUT_MS);
     return MfgTest::PASS;
@@ -305,5 +396,10 @@ MfgTest::MFG_TEST_RESULT_t MfgTest::gps_test(void)
         return MfgTest::FAIL;
     }
     SF_OSAL_printf("Location service pass" __NL__);
+
+    #ifdef PARTICLE
+        json_writer.name("gps").beginObject();
+        json_writer.endObject();
+    #endif
     return MfgTest::PASS;
 }

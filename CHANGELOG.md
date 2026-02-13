@@ -1,3 +1,16 @@
+## [3.23.1](https://github.com/UCSD-E4E/smartfin-fw3/compare/v3.23.0...v3.23.1) (2026-02-09)
+
+
+### Bug Fixes
+
+* correcting mfg output for imu test - mag ([85bbdc8](https://github.com/UCSD-E4E/smartfin-fw3/commit/85bbdc811d58fdd055e14aef22a031dc94e183c9))
+* minor ifdef fix ([55c0e4a](https://github.com/UCSD-E4E/smartfin-fw3/commit/55c0e4a370e49c9fd317cab920c6e91297b190ff))
+* more conntext in README and fixed output from gps mfg test ([f8a290c](https://github.com/UCSD-E4E/smartfin-fw3/commit/f8a290c548cc59d22c2b67b7fcfd606570ba992c))
+* removed spark header from mfgTest cpp ([96806ab](https://github.com/UCSD-E4E/smartfin-fw3/commit/96806aba93a2ea1493b8dda041f5b52423096e23))
+* resolved JSONBufferWriter dependency ([c49d8bd](https://github.com/UCSD-E4E/smartfin-fw3/commit/c49d8bdd4a4e069b2ddd2c582d9285a40bf23520))
+* revert to hpp ([1c21bb1](https://github.com/UCSD-E4E/smartfin-fw3/commit/1c21bb1a1710f902f78bde7bf69e3a7bf615e195))
+* wrapped json buffer writer with ifdef particle to let it pass remote tests ([be7be51](https://github.com/UCSD-E4E/smartfin-fw3/commit/be7be51e96924d2f787bc54e9e69ef502e2a3ace))
+
 # [3.23.0](https://github.com/UCSD-E4E/smartfin-fw3/compare/v3.22.0...v3.23.0) (2025-08-18)
 
 

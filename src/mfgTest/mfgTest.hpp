@@ -3,6 +3,10 @@
 
 #include "task.hpp"
 
+#ifdef PARTICLE
+    #include <spark_wiring_json.h>
+#endif
+
 #define MFG_MIN_VALID_TEMPERATURE 15
 #define MFG_MAX_VALID_TEMPERATURE   30
 
@@ -65,6 +69,12 @@ private:
      * Initialized in mfgTest.cpp with references to each manufacturing test to run
      */
     static mfg_test_entry MFG_TEST_TABLE[];
+
+    // particle specific json writer object, so defined
+    #ifdef PARTICLE
+        static char json_buffer[1024];
+        static spark::JSONBufferWriter json_writer;
+    #endif
 
     /**
      * @brief Test the wet/dry sensor

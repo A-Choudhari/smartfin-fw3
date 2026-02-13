@@ -56,6 +56,13 @@ class CLI : public Task
          * @return command function if found, nullptr otherwise
         */
         CLI_menu_t* CLI_findCommand(const char *cmd);
+    private:
+        /**
+         * @brief Flag storing if data upload state successfully initializes.
+         * Variable storing 1 if system successfully enters data upload state, or 0
+         * if system times out before entering data upload state.
+         */
+        int initSuccess;
 };
 
 extern STATES_e CLI_nextState;
