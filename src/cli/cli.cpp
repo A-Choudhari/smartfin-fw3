@@ -27,6 +27,7 @@
 #include "system.hpp"
 #include "util.hpp"
 #include "vers.hpp"
+#include "cellular/sf_cloud.hpp"
 
 #include <bits/stdc++.h>
 #include <cstdlib>
@@ -98,6 +99,19 @@ void CLI::init(void)
     CLI_ledStatus.setPriority(CLI_RGB_LED_PRIORITY);
     CLI_ledStatus.setActive();
 
+    //referenced dataupload
+    this->initSuccess = 1;
+    //RGB connection test
+    if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS))
+    {
+        this->initSuccess = 0;
+        //CLI_ledStatus.setColor(RGB_COLOR_YELLOW);
+    }
+    // else if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS) == 0) {
+    //     CLI_ledStatus.setColor(RGB_COLOR_BLUE);
+    // } 
+    Particle.syncTime();
+
     // While there is an avaliable character typed, get it
     while (SF_OSAL_kbhit())
     {
@@ -120,6 +134,11 @@ STATES_e CLI::run(void)
 
 void CLI::exit()
 {
+    if (sf::cloud::wait_disconnect(5000))
+    {
+        FLOG_AddError(FLOG_CELL_DISCONN_FAIL, 0);
+    }
+    CLI_ledStatus.setActive(false);
     pSystemDesc->pChargerCheck->stop();
 }
 
