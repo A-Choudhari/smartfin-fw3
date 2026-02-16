@@ -326,6 +326,22 @@
 #endif
 
 /**
+ * @brief BLE Upload Configuration
+ * 
+ */
+/**
+ * @brief Timeout for waiting for BLE connection during upload (ms)
+ * 
+ */
+#define BLE_UPLOAD_TIMEOUT_MS 60000
+
+/**
+ * @brief Enable BLE upload as primary method
+ * 
+ */
+#define BLE_UPLOAD_ENABLED 1
+
+/**
  * @brief Inhibit Upload Flag
  *
  */

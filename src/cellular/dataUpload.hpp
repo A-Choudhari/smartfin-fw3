@@ -5,6 +5,10 @@
 #include "Particle.h"
 #include "product.hpp"
 
+#if BLE_UPLOAD_ENABLED
+// BLE includes for Nordic UART Service
+#endif
+
 
 /**
  * RGB LED state is handled by the system theme.
@@ -74,6 +78,30 @@ private:
     int initSuccess;
     //! Tracks the last connection attempt time.
     system_tick_t lastConnectTime;
+    
+#if BLE_UPLOAD_ENABLED
+    /**
+     * @brief BLE characteristics for Nordic UART Service
+     */
+    static const BleUuid serviceUuid;
+    static const BleUuid rxUuid;
+    static const BleUuid txUuid;
+    static BleCharacteristic txCharacteristic;
+    static BleCharacteristic rxCharacteristic;
+    
+    /**
+     * @brief Attempts to upload data via BLE
+     * 
+     * @return STATE_DEEP_SLEEP if successful, STATE_UPLOAD to try cellular
+     */
+    STATES_e tryBleUpload(void);
+    
+    /**
+     * @brief Callback for BLE data received
+     */
+    static void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
+#endif
+    
     /**
      * @brief Identifies if data upload is possible.
      *
