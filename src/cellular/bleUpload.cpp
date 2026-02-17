@@ -7,6 +7,7 @@
  */
 
 #include "cellular/bleUpload.hpp"
+#include "cellular/dataUpload.hpp" // for DU_PUBLISH_ID_NAME_LEN
 #include "cellular/sf_cloud.hpp" // for error codes if needed
 #include "cellular/encoding/base64.h"
 #include "consts.hpp"
@@ -21,8 +22,8 @@ const BleUuid BleUpload::rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 const BleUuid BleUpload::txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
 // Characteristics
-static BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, txUuid, serviceUuid);
-static BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, rxUuid, serviceUuid);
+static BleCharacteristic txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, BleUpload::txUuid, BleUpload::serviceUuid);
+static BleCharacteristic rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, BleUpload::rxUuid, BleUpload::serviceUuid);
 
 void BleUpload::onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context) {
     // Optional: Handle incoming commands from the phone

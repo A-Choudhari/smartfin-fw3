@@ -117,7 +117,7 @@ STATES_e DataUpload::tryBleUpload(void)
     int retval;
     size_t recordsUploaded = 0;
     
-    SF_OSAL_printf(\"Trying BLE upload...\" __NL__);
+    SF_OSAL_printf("Trying BLE upload..." __NL__);
     
     // Wait for BLE connection with timeout
     system_tick_t startTime = millis();
@@ -127,7 +127,7 @@ STATES_e DataUpload::tryBleUpload(void)
         
         // Check for timeout
         if (millis() - startTime > BLE_UPLOAD_TIMEOUT_MS) {
-            SF_OSAL_printf(\"BLE connection timeout, falling back to cellular\" __NL__);
+            SF_OSAL_printf("BLE connection timeout, falling back to cellular" __NL__);
             return STATE_UPLOAD; // Signal to try cellular
         }
         
@@ -137,7 +137,7 @@ STATES_e DataUpload::tryBleUpload(void)
         }
     }
     
-    SF_OSAL_printf(\"BLE Connected! Starting upload...\" __NL__);
+    SF_OSAL_printf("BLE Connected! Starting upload..." __NL__);
     status.setPattern(SF_DUP_RGB_LED_PATTERN);
     status.setPeriod(SF_DUP_RGB_LED_PERIOD / 2);
     
@@ -152,7 +152,7 @@ STATES_e DataUpload::tryBleUpload(void)
             return STATE_DEEP_SLEEP;
         case -1:
         case -3:
-            SF_OSAL_printf(\"Failed to retrieve data: %d\" __NL__, nBytesToEncode);
+            SF_OSAL_printf("Failed to retrieve data: %d" __NL__, nBytesToEncode);
             return STATE_CLI;
         default:
             break;
@@ -167,20 +167,20 @@ STATES_e DataUpload::tryBleUpload(void)
         memset(ascii_record_buffer, 0, SF_RECORD_SIZE + 1);
         nBytesToSend = SF_RECORD_SIZE + 1;
         if ((retval = urlsafe_b64_encode(binary_packet_buffer, nBytesToEncode, ascii_record_buffer, &nBytesToSend))) {
-            SF_OSAL_printf(\"Failed to encode: %d\" __NL__, retval);
+            SF_OSAL_printf("Failed to encode: %d" __NL__, retval);
             return STATE_CLI;
         }
         
         // Send via BLE
         txCharacteristic.setValue((uint8_t*)ascii_record_buffer, nBytesToSend);
-        SF_OSAL_printf(\"BLE sent: %s (%u bytes)\" __NL__, publishName, nBytesToSend);
+        SF_OSAL_printf("BLE sent: %s (%u bytes)" __NL__, publishName, nBytesToSend);
         recordsUploaded++;
         
         // Pop from recorder
         switch (pSystemDesc->pRecorder->popLastPacket(nBytesToEncode)) {
         case -1:
         case -2:
-            SF_OSAL_printf(\"Session failure\" __NL__);
+            SF_OSAL_printf("Session failure" __NL__);
             FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
             return STATE_CLI;
         case 0:
@@ -191,7 +191,7 @@ STATES_e DataUpload::tryBleUpload(void)
         delay(50); // Small delay to avoid saturating BLE
     }
     
-    SF_OSAL_printf(\"BLE upload complete: %u records\" __NL__, recordsUploaded);
+    SF_OSAL_printf("BLE upload complete: %u records" __NL__, recordsUploaded);
     FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
     return STATE_DEEP_SLEEP;
 }

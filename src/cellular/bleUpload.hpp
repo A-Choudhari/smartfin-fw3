@@ -45,13 +45,13 @@ public:
 
     LEDStatus status;
 
-private:
-    bool initSuccess;
-    
-    // UUIDs for Nordic UART Service
+    // UUIDs for Nordic UART Service (public so static characteristics can access)
     static const BleUuid serviceUuid;
     static const BleUuid rxUuid;
     static const BleUuid txUuid;
+
+private:
+    bool initSuccess;
 
     // Static buffers/callbacks if needed by the BLE API
     static void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
