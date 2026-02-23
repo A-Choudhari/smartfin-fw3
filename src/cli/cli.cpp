@@ -179,7 +179,7 @@ static void CLI_setState(void)
         return;
     }
     CLI_nextState = nextState;
-    SF_OSAL_printf("Switching to %s" __NL__, STATES_NAME_TAB[nextState]);
+    SF_OSAL_printf("Next: %s. Type 'q' to start." __NL__, STATES_NAME_TAB[nextState]);
     return;
 }
 

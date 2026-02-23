@@ -87,7 +87,7 @@ private:
     static const BleUuid rxUuid;
     static const BleUuid txUuid;
     static BleCharacteristic txCharacteristic;
-    static BleCharacteristic rxCharacteristic;
+    // static BleCharacteristic rxCharacteristic;
     
     /**
      * @brief Attempts to upload data via BLE
@@ -102,6 +102,16 @@ private:
     static void onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context);
 #endif
     
+    /**
+     * @brief Fetches and encodes the next packet from the recorder.
+     * @param buffer Output binary buffer.
+     * @param ascii Output ASCII buffer.
+     * @param name Output publish name buffer.
+     * @param encodedLen Output encoded length.
+     * @return 0 on success, negative error code or next state on failure.
+     */
+    int preparePacket(uint8_t* buffer, char* ascii, char* name, int& encodedLen);
+
     /**
      * @brief Identifies if data upload is possible.
      *

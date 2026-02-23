@@ -26,7 +26,7 @@
 #include <sys/stat.h>
 
 
-#define REC_DEBUG
+// #define REC_DEBUG
 
 #define DATA_ROOT "/data"
 #define METADATA_FILE DATA_ROOT "/.metadata"
@@ -232,7 +232,9 @@ int Recorder::openLastSession(Deployment& session, char* p_name_buf)
         */
         if (!session.open(this->filename_buffer, Deployment::RDWR))
         {
+        #ifdef REC_DEBUG
             SF_OSAL_printf("REC::OPEN Fail to open %s" __NL__, this->filename_buffer);
+        #endif
             FLOG_AddError(FLOG_REC_OPEN_LAST_SESSION_FAIL, 3);
             // Instead of returning an error code, skip this file
             // return 3;
@@ -251,7 +253,9 @@ int Recorder::openLastSession(Deployment& session, char* p_name_buf)
         {
             if (1 != session.remove())
             {
+                #ifdef REC_DEBUG
                 SF_OSAL_printf("REC::OPEN Failed to remove empty session!" __NL__);
+                #endif
                 FLOG_AddError(FLOG_REC_OPEN_LAST_SESSION_FAIL, 4);
                 return 4;
             }
@@ -275,7 +279,9 @@ int Recorder::openLastSession(Deployment& session, char* p_name_buf)
             snprintf(
                 p_name_buf, NAME_MAX, "%08" PRIu32, entry.session_idx);
         }
+        #ifdef REC_DEBUG
         SF_OSAL_printf("Set name to %s" __NL__, p_name_buf);
+        #endif
         return 0;
     }
     FLOG_AddError(FLOG_REC_OPEN_LAST_SESSION_FAIL, 5);
@@ -433,7 +439,9 @@ int Recorder::openSession()
     }
     if (nullptr != this->pSession)
     {
+        #ifdef REC_DEBUG
         SF_OSAL_printf("Double open!" __NL__);
+        #endif
         FLOG_AddError(FLOG_REC_DOUBLE_OPEN, 0);
         return 0;
     }
@@ -449,13 +457,17 @@ int Recorder::openSession()
     if (!this->pSession->open(this->filename_buffer, Deployment::WRITE))
     {
         this->pSession = nullptr;
+        #ifdef REC_DEBUG
         SF_OSAL_printf("REC::OPEN Fail to open" __NL__);
+        #endif
         return 0;
     }
     memset(this->dataBuffer, 0, REC_MEMORY_BUFFER_SIZE);
     this->dataIdx = 0;
     this->time_set = false;
+    #ifdef REC_DEBUG
     SF_OSAL_printf("REC::OPEN opened %s" __NL__, this->filename_buffer);
+    #endif
     return 1;
 }
 
@@ -463,13 +475,17 @@ int Recorder::closeSession(void)
 {
     if (nullptr == this->pSession)
     {
+        #ifdef REC_DEBUG
         SF_OSAL_printf("REC::CLOSE Already closed\n");
+        #endif
         return 1;
     }
 
     // flush buffer
     int x = this->pSession->write(this->dataBuffer, this->dataIdx);
+    #ifdef REC_DEBUG
     SF_OSAL_printf("Bytes written %d" __NL__, x);
+    #endif
 
     // Close session
     this->pSession->close();
@@ -733,7 +749,9 @@ int rmtree(DIR *const dir_to_remove, char *const prefix)
                 FLOG_AddError(FLOG_REC_RMTREE_OPENDIR, errno);
                 return 1;
             }
+            #ifdef REC_DEBUG
             SF_OSAL_printf("rmtree %s", prefix);
+            #endif
             retval = rmtree(next_dir, prefix);
             closedir(next_dir);
             if (retval)

@@ -47,16 +47,8 @@ void CLI_doSleep(void)
 
 void CLI_doUpload(void)
 {
-    char integer_string[64];
-    int integer = Time.now();
-
-    char other_string[64] = "Session: ";
-    sprintf(integer_string, "%d", integer);
-
-    strcat(other_string, integer_string);
-
-    int success = sf::cloud::publish_blob(other_string, "Particle was here!");
-    SF_OSAL_printf("Particle publish: %d" __NL__, success);
+    CLI_nextState = STATE_UPLOAD;
+    SF_OSAL_printf("Next: UPLOAD. Type 'q' to start." __NL__);
 }
 
 void CLI_self_identify(void)

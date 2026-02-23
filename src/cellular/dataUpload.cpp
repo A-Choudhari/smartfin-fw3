@@ -16,17 +16,14 @@
 #if BLE_UPLOAD_ENABLED
 // Nordic UART Service UUIDs
 const BleUuid DataUpload::serviceUuid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-const BleUuid DataUpload::rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+// const BleUuid DataUpload::rxUuid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 const BleUuid DataUpload::txUuid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
 // BLE Characteristics
 BleCharacteristic DataUpload::txCharacteristic("tx", BleCharacteristicProperty::NOTIFY, DataUpload::txUuid, DataUpload::serviceUuid);
-BleCharacteristic DataUpload::rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, DataUpload::rxUuid, DataUpload::serviceUuid);
+// BleCharacteristic DataUpload::rxCharacteristic("rx", BleCharacteristicProperty::WRITE_WO_RSP, DataUpload::rxUuid, DataUpload::serviceUuid);
 
-void DataUpload::onDataReceived(const uint8_t* data, size_t len, const BlePeerDevice& peer, void* context) {
-    // Optional: Handle incoming commands from the phone
-    SF_OSAL_printf("BLE Received %u bytes" __NL__, len);
-}
+
 #endif
 
 void DataUpload::init(void)
@@ -36,308 +33,205 @@ void DataUpload::init(void)
     status.setPeriod(SF_DUP_RGB_LED_PERIOD);
     status.setPriority(SF_DUP_RGB_LED_PRIORITY);
     status.setActive();
-    SF_OSAL_printf("Enter DATA_UPLOAD" __NL__);
+    SF_OSAL_printf("UPLOAD" __NL__);
+    Serial.flush();
 
     this->initSuccess = 1;
     
 #if BLE_UPLOAD_ENABLED
-    // Setup BLE first (lower power, faster if phone nearby)
     BLE.addCharacteristic(txCharacteristic);
-    BLE.addCharacteristic(rxCharacteristic);
-    rxCharacteristic.onDataReceived(DataUpload::onDataReceived, this);
+    // BLE.addCharacteristic(rxCharacteristic);
+    // rxCharacteristic.onDataReceived(DataUpload::onDataReceived, this);
     
     BleAdvertisingData advData;
     advData.appendServiceUUID(serviceUuid);
     advData.appendLocalName("Smartfin");
     
     if (BLE.advertise(&advData) == 0) {
-        SF_OSAL_printf("BLE adv started" __NL__);
+        SF_OSAL_printf("BLE start" __NL__);
     } else {
-        SF_OSAL_printf("BLE adv fail" __NL__);
+        SF_OSAL_printf("BLE fail" __NL__);
     }
+    Serial.flush();
 #endif
     
-    // Also prepare cellular (will be used as fallback)
+    // Cellular wait moved to after BLE start to allow immediate advertising
+    SF_OSAL_printf("Cell c" __NL__);
+    Serial.flush();
+    
+#if BLE_UPLOAD_ENABLED
+    // Use a shorter timeout in init if BLE is enabled to allow quicker testing
+    if (sf::cloud::wait_connect(30000))
+    {
+        SF_OSAL_printf("Cell F (BLE active)" __NL__);
+    } else {
+        SF_OSAL_printf("Cell OK" __NL__);
+        Particle.syncTime();
+    }
+    // Stay success for BLE
+    this->initSuccess = 1;
+#else
     if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS))
     {
         this->initSuccess = 0;
+        SF_OSAL_printf("Cell F" __NL__);
+    } else {
+        SF_OSAL_printf("Cell OK" __NL__);
+        Particle.syncTime();
     }
-    Particle.syncTime();
+#endif
+    Serial.flush();
+}
+
+int DataUpload::preparePacket(uint8_t* buffer, char* ascii, char* name, int& encodedLen) {
+    memset(buffer, 0, SF_PACKET_SIZE);
+    int nBytes = pSystemDesc->pRecorder->getLastPacket(buffer, SF_PACKET_SIZE, name, DU_PUBLISH_ID_NAME_LEN);
+    
+    if (nBytes < 0) {
+        if (nBytes == -2) FLOG_AddError(FLOG_UPL_OPEN_FAIL, 0);
+        return nBytes; // Error codes map nicely
+    }
+
+    // Alignment
+    if (nBytes % 4 != 0) nBytes += 4 - (nBytes % 4);
+    encodedLen = nBytes;
+
+    memset(ascii, 0, SF_RECORD_SIZE + 1);
+    size_t nBytesToSend = SF_RECORD_SIZE + 1;
+    int retval;
+
+#if SF_UPLOAD_ENCODING == SF_UPLOAD_BASE64URL
+    retval = urlsafe_b64_encode(buffer, nBytes, ascii, &nBytesToSend);
+#else
+    retval = b64_encode(buffer, nBytes, ascii, &nBytesToSend);
+#endif
+
+    if (retval) {
+        SF_OSAL_printf("Enc err: %d" __NL__, retval);
+        return -4; // Internal error code for encoding failure
+    }
+    return 0;
 }
 
 STATES_e DataUpload::can_upload(void)
 {
     if (!pSystemDesc->pRecorder->hasData())
     {
-        if (pSystemDesc->flags->hasCharger)
-        {
-            return STATE_CHARGE;
-        }
-        else
-        {
-            return STATE_DEEP_SLEEP;
-        }
+        return pSystemDesc->flags->hasCharger ? STATE_CHARGE : STATE_DEEP_SLEEP;
     }
 
     if (!sf::cloud::is_connected())
     {
-        if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS))
-        {
-            // Lost connection and failed to reconnect
-            return STATE_DEEP_SLEEP;
-        }
+        if (sf::cloud::wait_connect(SF_CELL_SIGNAL_TIMEOUT_MS)) return STATE_DEEP_SLEEP;
     }
 
-    if (pSystemDesc->pWaterSensor->getCurrentStatus())
-    {
-        // In water
-        return STATE_DEPLOYED;
-    }
+    if (pSystemDesc->pWaterSensor->getCurrentStatus()) return STATE_DEPLOYED;
+    if (pSystemDesc->pBattery->getVCell() < SF_BATTERY_UPLOAD_VOLTAGE) return STATE_DEEP_SLEEP;
 
-    if (pSystemDesc->pBattery->getVCell() < SF_BATTERY_UPLOAD_VOLTAGE)
-    {
-        return STATE_DEEP_SLEEP;
-    }
-    // Don't change current state, continue looping
-#if SF_CAN_UPLOAD
     return STATE_UPLOAD;
-#else
-    return STATE_DEEP_SLEEP;
-#endif
 }
 
 #if BLE_UPLOAD_ENABLED
 STATES_e DataUpload::tryBleUpload(void)
 {
-    uint8_t binary_packet_buffer[SF_PACKET_SIZE];
-    char ascii_record_buffer[SF_RECORD_SIZE + 1];
-    char publishName[DU_PUBLISH_ID_NAME_LEN + 1];
-    int nBytesToEncode;
-    size_t nBytesToSend;
-    int retval;
-    size_t recordsUploaded = 0;
+    uint8_t bin[SF_PACKET_SIZE];
+    char ascii[SF_RECORD_SIZE + 1];
+    char name[DU_PUBLISH_ID_NAME_LEN + 1];
+    int encodedLen;
+    size_t uploaded = 0;
     
-    SF_OSAL_printf("Try BLE..." __NL__);
+    SF_OSAL_printf("BLE..." __NL__);
     
-    // Wait for BLE connection with timeout
     system_tick_t startTime = millis();
     while (!BLE.connected()) {
         Particle.process();
-        delay(10);
-        
-        // Check for timeout
         if (millis() - startTime > BLE_UPLOAD_TIMEOUT_MS) {
-            SF_OSAL_printf("BLE timeout" __NL__);
-            return STATE_UPLOAD; // Signal to try cellular
+            SF_OSAL_printf("BLE TO" __NL__);
+            return STATE_UPLOAD;
         }
-        
-        // Safety checks during wait
-        if (pSystemDesc->pWaterSensor->getCurrentStatus()) {
-            return STATE_DEPLOYED;
-        }
+        if (pSystemDesc->pWaterSensor->getCurrentStatus()) return STATE_DEPLOYED;
+        delay(10);
     }
     
-    SF_OSAL_printf("BLE connected" __NL__);
+    SF_OSAL_printf("BLE C" __NL__);
     status.setPattern(SF_DUP_RGB_LED_PATTERN);
     status.setPeriod(SF_DUP_RGB_LED_PERIOD / 2);
     
-    // Upload loop
     while (BLE.connected() && pSystemDesc->pRecorder->hasData()) {
-        memset(binary_packet_buffer, 0, SF_PACKET_SIZE);
-        nBytesToEncode = pSystemDesc->pRecorder->getLastPacket(binary_packet_buffer, SF_PACKET_SIZE, publishName, DU_PUBLISH_ID_NAME_LEN);
+        int res = preparePacket(bin, ascii, name, encodedLen);
+        if (res < 0) return (res == -2) ? STATE_DEEP_SLEEP : STATE_CLI;
         
-        switch (nBytesToEncode) {
-        case -2:
-            FLOG_AddError(FLOG_UPL_OPEN_FAIL, 0);
-            return STATE_DEEP_SLEEP;
-        case -1:
-        case -3:
-            SF_OSAL_printf("Get data fail: %d" __NL__, nBytesToEncode);
-            return STATE_CLI;
-        default:
+        txCharacteristic.setValue((uint8_t*)ascii, strlen(ascii));
+        SF_OSAL_printf("BLE: %s" __NL__, name);
+        uploaded++;
+        
+        if (pSystemDesc->pRecorder->popLastPacket(encodedLen) < 0) {
+            SF_OSAL_printf("Pop err" __NL__);
             break;
         }
-        
-        // Align to 4 bytes
-        if (nBytesToEncode % 4 != 0) {
-            nBytesToEncode += 4 - (nBytesToEncode % 4);
-        }
-        
-        // Encode to Base64
-        memset(ascii_record_buffer, 0, SF_RECORD_SIZE + 1);
-        nBytesToSend = SF_RECORD_SIZE + 1;
-        if ((retval = urlsafe_b64_encode(binary_packet_buffer, nBytesToEncode, ascii_record_buffer, &nBytesToSend))) {
-            SF_OSAL_printf("Encode fail: %d" __NL__, retval);
-            return STATE_CLI;
-        }
-        
-        // Send via BLE
-        txCharacteristic.setValue((uint8_t*)ascii_record_buffer, nBytesToSend);
-        SF_OSAL_printf("BLE: %s" __NL__, publishName);
-        recordsUploaded++;
-        
-        // Pop from recorder
-        switch (pSystemDesc->pRecorder->popLastPacket(nBytesToEncode)) {
-        case -1:
-        case -2:
-            SF_OSAL_printf("Session failure" __NL__);
-            FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-            return STATE_CLI;
-        case 0:
-            break;
-        }
-        
         Particle.process();
-        delay(50); // Small delay to avoid saturating BLE
+        delay(50);
     }
     
-    SF_OSAL_printf("BLE done: %u" __NL__, recordsUploaded);
-    FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
+    SF_OSAL_printf("BLE D: %u" __NL__, uploaded);
+    FLOG_AddError(FLOG_UPL_COUNT, uploaded);
     return STATE_DEEP_SLEEP;
 }
 #endif
 
 STATES_e DataUpload::run(void)
 {
-#if SF_CAN_UPLOAD
-    uint8_t binary_packet_buffer[SF_PACKET_SIZE];
-    char ascii_record_buffer[SF_RECORD_SIZE + 1];
-    char publishName[DU_PUBLISH_ID_NAME_LEN + 1];
-    int nBytesToEncode;
-    size_t nBytesToSend;
-    STATES_e next_state;
-    int retval;
-    size_t recordsUploaded = 0;
+    uint8_t bin[SF_PACKET_SIZE];
+    char ascii[SF_RECORD_SIZE + 1];
+    char name[DU_PUBLISH_ID_NAME_LEN + 1];
+    int encodedLen;
+    size_t uploaded = 0;
 
-    if (!this->initSuccess)
-    {
-        SF_OSAL_printf("Failed to init\n");
-        FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0401);
+    if (!this->initSuccess) {
+        SF_OSAL_printf("Init F" __NL__);
         return STATE_DEEP_SLEEP;
     }
 
 #if BLE_UPLOAD_ENABLED
-    // Try BLE first (lower power, faster if phone nearby)
     STATES_e bleResult = tryBleUpload();
-    if (bleResult != STATE_UPLOAD) {
-        // BLE succeeded or encountered error - return that state
-        return bleResult;
-    }
-    // If we get here, BLE timed out - fall through to cellular
-    SF_OSAL_printf("Try cellular" __NL__);
+    if (bleResult != STATE_UPLOAD) return bleResult;
+    SF_OSAL_printf("Try cell" __NL__);
 #endif
 
     status.setPattern(SF_DUP_RGB_LED_PATTERN);
     status.setPeriod(SF_DUP_RGB_LED_PERIOD / 2);
     status.setActive();
 
-    while ((next_state = can_upload()) == STATE_UPLOAD)
+    while (can_upload() == STATE_UPLOAD)
     {
-        memset(binary_packet_buffer, 0, SF_PACKET_SIZE);
-        nBytesToEncode = pSystemDesc->pRecorder->getLastPacket(binary_packet_buffer, SF_PACKET_SIZE, publishName, DU_PUBLISH_ID_NAME_LEN);
-        switch (nBytesToEncode)
-        {
-        case -2:
-            // We already know that there is data, but we aren't able to retrieve
-            // it.  This can indicate recorder failure.
-            FLOG_AddError(FLOG_UPL_OPEN_FAIL, 0);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0402);
-            return STATE_DEEP_SLEEP;
-        case -1:
-        case -3:
-            // Either active session (bug) or buffer overflow (bug)
-            SF_OSAL_printf("Failed to retrieve data: %d" __NL__, nBytesToEncode);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0403);
-            return STATE_CLI;
-        default:
-            break;
+        int res = preparePacket(bin, ascii, name, encodedLen);
+        if (res < 0) return (res == -2) ? STATE_DEEP_SLEEP : STATE_CLI;
+
+        SF_OSAL_printf("Pub: %s" __NL__, name);
+        int retval = sf::cloud::publish_blob(name, ascii);
+        uploaded++;
+
+        if (retval != sf::cloud::SUCCESS) {
+            SF_OSAL_printf("Pub fail: %d" __NL__, retval);
+            return (retval == sf::cloud::NOT_CONNECTED || retval == sf::cloud::PUBLISH_FAIL) ? STATE_DEEP_SLEEP : STATE_CLI;
         }
 
-        SF_OSAL_printf("Publish ID: %s" __NL__, publishName);
-
-        // 32-bit alignment? 4 byte alignment?
-        if (nBytesToEncode % 4 != 0)
-        {
-            nBytesToEncode += 4 - (nBytesToEncode % 4);
-        }
-        SF_OSAL_printf("%d bytes to encode" __NL__, nBytesToEncode);
-
-        // Encode
-        memset(ascii_record_buffer, 0, SF_RECORD_SIZE + 1);
-        nBytesToSend = SF_RECORD_SIZE + 1;
-        if ((retval = urlsafe_b64_encode(
-                 binary_packet_buffer, nBytesToEncode, ascii_record_buffer, &nBytesToSend)))
-        {
-            // size limit violation is bug
-            SF_OSAL_printf("Failed to encode: %d" __NL__, retval);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0404);
+        if (pSystemDesc->pRecorder->popLastPacket(encodedLen) < 0) {
+            SF_OSAL_printf("Pop err" __NL__);
             return STATE_CLI;
         }
-
-        SF_OSAL_printf("Got %u bytes to upload" __NL__, nBytesToSend);
-
-        SF_OSAL_printf("Data: %s" __NL__, ascii_record_buffer);
-        retval = sf::cloud::publish_blob(publishName, ascii_record_buffer);
-        recordsUploaded++;
-        switch (retval)
-        {
-        default:
-        case sf::cloud::OVERSIZE_DATA:
-        case sf::cloud::OVERSIZE_NAME:
-            SF_OSAL_printf("Failed to publish: %d" __NL__, retval);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0405);
-            FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-            return STATE_CLI;
-        case sf::cloud::NOT_CONNECTED:
-            FLOG_AddError(FLOG_UPL_CONNECT_FAIL, 1);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0406);
-            FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-            return STATE_DEEP_SLEEP;
-        case sf::cloud::PUBLISH_FAIL:
-            FLOG_AddError(FLOG_UPL_PUB_FAIL, 0);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0407);
-            FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-            return STATE_DEEP_SLEEP;
-        case sf::cloud::SUCCESS:
-            break;
-        }
-
-        SF_OSAL_printf("Uploaded record" __NL__);
-
         Particle.process();
-
-        switch (pSystemDesc->pRecorder->popLastPacket(nBytesToEncode))
-        {
-        case -1:
-        case -2:
-            // This is a bug
-            SF_OSAL_printf("Session failure" __NL__);
-            FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0408);
-            FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-            return STATE_CLI;
-        case 0:
-            break;
-        }
     }
-    FLOG_AddError(FLOG_SYS_STARTSTATE_JUSTIFICATION, 0x0409);
-    FLOG_AddError(FLOG_UPL_COUNT, recordsUploaded);
-    return next_state;
-#else
+    FLOG_AddError(FLOG_UPL_COUNT, uploaded);
     return STATE_DEEP_SLEEP;
-#endif
 }
 
 void DataUpload::exit(void)
 {
 #if BLE_UPLOAD_ENABLED
-    // Stop BLE advertising
     BLE.stopAdvertising();
 #endif
-    
-    if (sf::cloud::wait_disconnect(5000))
-    {
-        FLOG_AddError(FLOG_CELL_DISCONN_FAIL, 0);
-    }
+    sf::cloud::wait_disconnect(5000);
     status.setActive(false);
 }
 
