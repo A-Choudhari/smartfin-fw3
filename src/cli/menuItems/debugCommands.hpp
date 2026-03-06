@@ -16,11 +16,6 @@ void CLI_displayFLOG(void);
  */
 void CLI_clearFLOG(void);
 /**
- * @brief Tests printF functionality
- * 
- */
-void CLI_testPrintf(void);
-/**
  * @brief Creates test file in filesystem
 */
 void CLI_createTestFile(void);
@@ -69,4 +64,8 @@ void CLI_initCloudCounters(void);
  *
  */
 void CLI_dumpIMURegs(void);
+/**
+ * @brief Generate test data for upload testing
+ */
+void CLI_generateTestData(void);
 #endif

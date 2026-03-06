@@ -120,3 +120,9 @@ int LocationService::getLocation(LocationPoint &point)
 {
     return 1;
 }
+
+BleClass __global_ble;
+BleClass &__fetch_global_ble()
+{
+    return __global_ble;
+}

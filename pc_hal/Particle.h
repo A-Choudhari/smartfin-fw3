@@ -497,4 +497,40 @@ public:
     {
     }
 };
+class BleUuid {
+public:
+    BleUuid(const char* uuid) {}
+};
+
+enum class BleCharacteristicProperty {
+    NOTIFY,
+    WRITE_WO_RSP
+};
+
+class BlePeerDevice {};
+
+class BleCharacteristic {
+public:
+    BleCharacteristic(const char* name, BleCharacteristicProperty prop, BleUuid uuid, BleUuid serviceUuid) {}
+    void setValue(const uint8_t* data, size_t len) {}
+    void onDataReceived(void (*cb)(const uint8_t*, size_t, const BlePeerDevice&, void*), void* context) {}
+};
+
+class BleAdvertisingData {
+public:
+    void appendServiceUUID(BleUuid uuid) {}
+    void appendLocalName(const char* name) {}
+};
+
+class BleClass {
+public:
+    void addCharacteristic(BleCharacteristic& c) {}
+    int advertise(BleAdvertisingData* data) { return 0; }
+    bool connected() { return true; } // Always connected in simulation
+    void stopAdvertising() {}
+};
+
+#define BLE __fetch_global_ble()
+BleClass& __fetch_global_ble();
+
 #endif // __PC_HAL_PARTICLE_H__

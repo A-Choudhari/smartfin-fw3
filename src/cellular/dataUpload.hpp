@@ -66,6 +66,7 @@ public:
      * @brief Cleans up resources and exits the task.
      */
     void exit(void);
+    static void sendCounterTestData(void);
 
     LEDStatus status;
 

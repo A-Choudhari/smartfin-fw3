@@ -12,6 +12,7 @@
 #include "sleepTask.hpp"
 
 #include "Particle.h"
+#include <stdio.h>
 
 #if BLE_UPLOAD_ENABLED
 // Nordic UART Service UUIDs
@@ -156,23 +157,24 @@ STATES_e DataUpload::tryBleUpload(void)
     SF_OSAL_printf("BLE C" __NL__);
     status.setPattern(SF_DUP_RGB_LED_PATTERN);
     status.setPeriod(SF_DUP_RGB_LED_PERIOD / 2);
-    
-    while (BLE.connected() && pSystemDesc->pRecorder->hasData()) {
-        int res = preparePacket(bin, ascii, name, encodedLen);
-        if (res < 0) return (res == -2) ? STATE_DEEP_SLEEP : STATE_CLI;
-        
-        txCharacteristic.setValue((uint8_t*)ascii, strlen(ascii));
+
+    while (BLE.connected())
+    {
+        // int res = preparePacket(bin, ascii, name, encodedLen);
+        // if (res < 0) return (res == -2) ? STATE_DEEP_SLEEP : STATE_CLI;
+
+        // txCharacteristic.setValue((uint8_t*)ascii, strlen(ascii));
         SF_OSAL_printf("BLE: %s" __NL__, name);
         uploaded++;
-        
-        if (pSystemDesc->pRecorder->popLastPacket(encodedLen) < 0) {
-            SF_OSAL_printf("Pop err" __NL__);
-            break;
-        }
+
+        // if (pSystemDesc->pRecorder->popLastPacket(encodedLen) < 0) {
+        //     SF_OSAL_printf("Pop err" __NL__);
+        //     break;
+        // }
         Particle.process();
         delay(50);
     }
-    
+
     SF_OSAL_printf("BLE D: %u" __NL__, uploaded);
     FLOG_AddError(FLOG_UPL_COUNT, uploaded);
     return STATE_DEEP_SLEEP;
@@ -233,6 +235,23 @@ void DataUpload::exit(void)
 #endif
     sf::cloud::wait_disconnect(5000);
     status.setActive(false);
+}
+
+void DataUpload::sendCounterTestData(void)
+{
+    SF_OSAL_printf("Starting Bluetooth Counter Simulation (0-100)" __NL__);
+    for (int i = 0; i <= 100; i++)
+    {
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Counter: %d", i);
+        
+#if BLE_UPLOAD_ENABLED
+        txCharacteristic.setValue((uint8_t*)buf, strlen(buf));
+#endif
+        SF_OSAL_printf("Bluetooth Sent: %s" __NL__, buf);
+        delay(1000);
+    }
+    SF_OSAL_printf("Bluetooth Simulation Done" __NL__);
 }
 
 // In smartfin-fw2/src/dataUpload::DataUpload::exitState(void), we return based on the water sensor state.  If the system is in the water, we redeploy, otherwise we go to sleep.
