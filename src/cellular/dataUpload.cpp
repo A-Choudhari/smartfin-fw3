@@ -156,15 +156,15 @@ STATES_e DataUpload::tryBleUpload(void)
     SF_OSAL_printf("BLE C" __NL__);
     status.setPattern(SF_DUP_RGB_LED_PATTERN);
     status.setPeriod(SF_DUP_RGB_LED_PERIOD / 2);
-    
+
     while (BLE.connected() && pSystemDesc->pRecorder->hasData()) {
         int res = preparePacket(bin, ascii, name, encodedLen);
         if (res < 0) return (res == -2) ? STATE_DEEP_SLEEP : STATE_CLI;
-        
-        txCharacteristic.setValue((uint8_t*)ascii, strlen(ascii));
+
+        txCharacteristic.setValue((uint8_t *)ascii, strlen(ascii));
         SF_OSAL_printf("BLE: %s" __NL__, name);
         uploaded++;
-        
+
         if (pSystemDesc->pRecorder->popLastPacket(encodedLen) < 0) {
             SF_OSAL_printf("Pop err" __NL__);
             break;
@@ -172,7 +172,7 @@ STATES_e DataUpload::tryBleUpload(void)
         Particle.process();
         delay(50);
     }
-    
+
     SF_OSAL_printf("BLE D: %u" __NL__, uploaded);
     FLOG_AddError(FLOG_UPL_COUNT, uploaded);
     return STATE_DEEP_SLEEP;
