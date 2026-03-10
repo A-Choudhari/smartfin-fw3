@@ -362,3 +362,5 @@ void SFBLE::setConnectionCallback(connection_callback_t cb, void* context)
     this->connectionCallback = cb;
     this->connectionContext = context;
 }
+
+#endif // SF_PLATFORM == SF_PLATFORM_PARTICLE
