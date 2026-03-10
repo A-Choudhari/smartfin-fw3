@@ -13,6 +13,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Forward declare backend shim for friendship. */
+class ParticleBleBackend;
+
 /**
  * @brief Smartfin BLE wrapper.
  *
@@ -106,6 +109,9 @@ private:
     connection_callback_t connectionCallback;
     /** @brief User context for connection callback. */
     void* connectionContext;
+
+    /* Allow backend shim direct access to internal state. */
+    friend class ParticleBleBackend;
 };
 
 #endif // __SF_BLE_HPP__
