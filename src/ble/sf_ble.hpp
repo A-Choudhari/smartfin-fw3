@@ -1,0 +1,111 @@
+/**
+ * @file sf_ble.hpp
+ * @brief Platform Smartfin BLE wrapper interface.
+ * @author Charlie Kushelevsky (ckushelevsky@ucsd.edu)
+ * @date 3-9-2026
+ */
+
+#ifndef __SF_BLE_HPP__
+#define __SF_BLE_HPP__
+
+
+
+#include <stddef.h>
+#include <stdint.h>
+
+/**
+ * @brief Smartfin BLE wrapper.
+ *
+ * Hides Particle BLE types from the rest of the codebase so porting to a
+ * different chip requires changes mostly in the implementation file.
+ * @note Current intent: peripheral role with one telemetry notify
+ * characteristic and an optional control write characteristic
+ * inside a single custom service.
+ */
+class SFBLE
+{
+public:
+    /** @brief Callback invoked on control data received. */
+    typedef void (*control_rx_callback_t)(const uint8_t* data, size_t len, void* context);
+    /** @brief Callback invoked on connect/disconnect events. */
+    typedef void (*connection_callback_t)(bool connected, void* context);
+
+    /** @brief Get singleton instance. */
+    static SFBLE& getInstance(void);
+
+    /**
+     * @brief Initialize BLE stack and register service/characteristics.
+     * @return true on success, false on failure.
+     */
+    bool init(void);
+
+    /**
+     * @brief Start BLE advertising.
+     *
+     * @return true on success, false on failure.
+     */
+    bool startAdvertising(void);
+
+    /**
+     * @brief Stop BLE advertising.
+     *
+     * @return true on success, false on failure.
+     */
+    bool stopAdvertising(void);
+
+    /**
+     * @brief Returns true if a central is connected.
+     * @return true when a peer is connected, otherwise false.
+     */
+    bool isConnected(void) const;
+
+    /**
+     * @brief Send telemetry bytes to connected central using NOTIFY.
+     *
+     * @param pData Pointer to telemetry payload.
+     * @param len Number of bytes to send (must be >0 and <= MAX_NOTIFY_LEN).
+     * @return true on success, false on failure.
+     */
+    bool notifyTelemetry(const void* pData, size_t len);
+
+    /**
+     * @brief Register callback for incoming control data.
+     *
+     * @param cb Callback function invoked on received control bytes.
+     * @param context User context pointer passed to the callback.
+     */
+    void setControlCallback(control_rx_callback_t cb, void* context);
+
+    /**
+     * @brief Register callback for connect/disconnect events.
+     *
+     * @param cb Callback function invoked on connection state changes.
+     * @param context User context pointer passed to the callback.
+     */
+    void setConnectionCallback(connection_callback_t cb, void* context);
+
+private:
+    /** @brief Private default constructor to enforce singleton. */
+    SFBLE();
+    /** @brief Deleted copy constructor (singleton). */
+    SFBLE(const SFBLE&);
+    /** @brief Deleted assignment operator (singleton). */
+    SFBLE& operator=(const SFBLE&);
+
+    /** @brief True after BLE stack/characteristics are initialized. */
+    bool initialized;
+    /** @brief True when a central is currently connected. */
+    bool connected;
+
+    /** @brief Registered control-data callback. */
+    control_rx_callback_t controlCallback;
+    /** @brief User context for control callback. */
+    void* controlContext;
+
+    /** @brief Registered connection-state callback. */
+    connection_callback_t connectionCallback;
+    /** @brief User context for connection callback. */
+    void* connectionContext;
+};
+
+#endif // __SF_BLE_HPP__
