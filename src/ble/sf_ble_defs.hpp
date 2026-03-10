@@ -1,7 +1,7 @@
 /**
  * @file sf_ble_defs.hpp
  * @brief Smartfin BLE protocol identifiers and sizing constants.
- * @author Charlie Kushelevsky
+ * @author Charlie Kushelevsky (ckushelevsky@ucsd.edu)
  * @date 3-9-2026
  */
 #ifndef __SF_BLEDEFS_HPP__
@@ -25,16 +25,13 @@ namespace bledefs
  */
 
 /** @brief Custom Smartfin live telemetry service UUID. */
-inline constexpr const char* SERVICE_UUID =
-    "12345678-1234-1234-1234-1234567890AB";
+inline constexpr const char *SERVICE_UUID = "a86d7b16-dd6c-434b-a7ee-f0ca33ac614c";
 
 /** @brief Characteristic used for fin -> watch live telemetry. */
-inline constexpr const char* TELEMETRY_CHAR_UUID =
-    "12345678-1234-1234-1234-1234567890AC";
+inline constexpr const char *TELEMETRY_CHAR_UUID = "deeddb00-166e-407c-8158-7b9693ad2685";
 
 /** @brief Optional characteristic used for watch -> fin commands/config. */
-inline constexpr const char* CONTROL_CHAR_UUID =
-    "12345678-1234-1234-1234-1234567890AD";
+inline constexpr const char *CONTROL_CHAR_UUID = "c39513e6-631e-439a-9b3b-affa0635b3d1";
 
 /** @brief Short local BLE device name shown during advertising. */
 inline constexpr const char* DEVICE_NAME = "Smartfin";
