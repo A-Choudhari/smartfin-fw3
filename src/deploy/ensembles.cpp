@@ -16,6 +16,7 @@
 #include "system.hpp"
 #include "util.hpp"
 #include "vers.hpp"
+#include "ble/high_rate_stream.hpp"
 #include "ble/ble_live_stream.hpp"
 
 #include <cmath>
@@ -474,7 +475,10 @@ void SS_HighRateIMU_x0C_Func(DeploymentSchedule_t *pDeployment)
     ensData.header.ensembleType = ENS_TEMP_HIGH_DATA_RATE_IMU;
     ensData.header.elapsedTime_ds = Ens_getStartTime();
 
-    sf::deploy::commitEnsemble(&ensData, sizeof(EnsembleHeader_t) + sizeof(Ensemble12_data_t));
+    HighRateImuRecord record;
+    record.header = ensData.header;
+    record.data = ensData.data;
+    HighRateStream::getInstance().enqueueImuRecord(record);
 
 #endif
 }
