@@ -367,12 +367,8 @@ void SS_ensemble08Func(DeploymentSchedule_t *pDeployment)
         ens.ensData.scaled_temp = (temp * Q7_SCALAR);
         ens.ensData.water = water;
 
-#if SF_PLATFORM == SF_PLATFORM_PARTICLE
-        ens.ensData.timestamp =
-            BleLiveStream::getInstance().estimateUnixTime(millis());
-#else
-        ens.ensData.timestamp = 0;
-#endif
+        uint32_t unixEstimate = BleLiveStream::getInstance().estimateUnixTime(millis());
+        ens.ensData.timestamp = unixEstimate;
         sf::deploy::commitEnsemble(&ens, sizeof(ens));
         memset(pData, 0, sizeof(Ensemble08_eventData_t));
     }
