@@ -1,6 +1,6 @@
 /**
  * @file sf_ble.cpp
- * @brief Particle-backed implementation of the platform-adaptable BLE wrapper.
+ * @brief Particle backed implementation of the platform adaptable BLE wrapper.
  * @author Charlie Kushelevsky (ckushelevsky@ucsd.edu)
  * @date 3-9-2026
  */
@@ -15,22 +15,20 @@
 #include "Particle.h"
 #endif
 
-
 #if SF_PLATFORM == SF_PLATFORM_PARTICLE
 
 namespace
 {
-    /**
-     * @brief Particle-specific implementation 
-     */
-
-    
+    /** @brief Particle specific UUID objects. */
     BleUuid g_serviceUuid(sf::bledefs::SERVICE_UUID);
     BleUuid g_telemetryUuid(sf::bledefs::TELEMETRY_CHAR_UUID);
     BleUuid g_controlUuid(sf::bledefs::CONTROL_CHAR_UUID);
 
     /**
      * @brief Particle BLE backend that wires characteristics and event hooks.
+     *
+     * This class is intentionally confined to this translation unit so the rest
+     * of the codebase does not depend on Particle BLE types.
      */
     class ParticleBleBackend
     {
@@ -56,7 +54,10 @@ namespace
         {
         }
 
+        /** @brief Telemetry characteristic for fin -> watch data. */
         BleCharacteristic telemetryCharacteristic;
+
+        /** @brief Control characteristic for watch -> fin commands. */
         BleCharacteristic controlCharacteristic;
 
         /** @brief Access singleton backend instance. */
@@ -97,7 +98,7 @@ namespace
         }
 
         /**
-         * @brief Particle write-without-response callback shim.
+         * @brief Particle control write callback shim.
          * @param data Received payload.
          * @param len Number of bytes in payload.
          * @param peer Peer device (unused).
@@ -117,27 +118,25 @@ namespace
         }
 
         /**
-         * @brief Invoke connection callback chain on connect.
+         * @brief Handle Particle connect event.
          */
         void onConnected()
         {
-            SFBLE& ble = SFBLE::getInstance();
-            ble.setConnectionCallback(bleConnectionThunk, &ble);
+            SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(true, &ble);
         }
 
         /**
-         * @brief Invoke connection callback chain on disconnect.
+         * @brief Handle Particle disconnect event.
          */
         void onDisconnected()
         {
-            SFBLE& ble = SFBLE::getInstance();
-            ble.setConnectionCallback(bleConnectionThunk, &ble);
+            SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(false, &ble);
         }
 
         /**
-         * @brief Forward control writes to registered handler.
+         * @brief Forward control writes to wrapper.
          * @param data Control payload bytes.
          * @param len Payload length.
          */
@@ -152,48 +151,37 @@ namespace
          * @param isConnected True if connected, false otherwise.
          * @param context Pointer to SFBLE instance.
          */
-        static void bleConnectionThunk(bool isConnected, void* context);
+        static void bleConnectionThunk(bool isConnected, void *context)
+        {
+            SFBLE *ble = static_cast<SFBLE *>(context);
+            if (!ble)
+            {
+                return;
+            }
+
+            ble->handleConnectionEvent(isConnected);
+        }
+
         /**
          * @brief Bridge control writes to SFBLE instance.
          * @param data Control payload.
          * @param len Payload length.
          * @param context Pointer to SFBLE instance.
          */
-        static void bleControlThunk(const uint8_t* data, size_t len, 
-                                                        void* context);
+        static void bleControlThunk(const uint8_t *data, size_t len, void *context)
+        {
+            SFBLE *ble = static_cast<SFBLE *>(context);
+            if (!ble)
+            {
+                return;
+            }
+
+            ble->handleControlEvent(data, len);
+        }
     };
+} // namespace
 
-    void ParticleBleBackend::bleConnectionThunk(bool isConnected, void* context)
-    {
-        SFBLE* ble = static_cast<SFBLE*>(context);
-        if (!ble)
-        {
-            return;
-        }
-
-        ble->connected = isConnected;
-
-        if (ble->connectionCallback)
-        {
-            ble->connectionCallback(isConnected, ble->connectionContext);
-        }
-    }
-
-    void ParticleBleBackend::bleControlThunk(const uint8_t* data, size_t len, 
-                                                                void* context)
-    {
-        SFBLE* ble = static_cast<SFBLE*>(context);
-        if (!ble)
-        {
-            return;
-        }
-
-        if (ble->controlCallback)
-        {
-            ble->controlCallback(data, len, ble->controlContext);
-        }
-    }
-}
+#endif // SF_PLATFORM == SF_PLATFORM_PARTICLE
 
 /**
  * @brief Get singleton SFBLE instance.
@@ -205,6 +193,9 @@ SFBLE& SFBLE::getInstance(void)
     return instance;
 }
 
+/**
+ * @brief Construct default wrapper state.
+ */
 SFBLE::SFBLE() :
     initialized(false),
     connected(false),
@@ -213,6 +204,33 @@ SFBLE::SFBLE() :
     connectionCallback(nullptr),
     connectionContext(nullptr)
 {
+}
+
+/**
+ * @brief Internal connection event handler.
+ * @param isConnected true if connected, false otherwise.
+ */
+void SFBLE::handleConnectionEvent(bool isConnected)
+{
+    this->connected = isConnected;
+
+    if (this->connectionCallback)
+    {
+        this->connectionCallback(isConnected, this->connectionContext);
+    }
+}
+
+/**
+ * @brief Internal control event handler.
+ * @param data Pointer to received payload.
+ * @param len Payload length.
+ */
+void SFBLE::handleControlEvent(const uint8_t *data, size_t len)
+{
+    if (this->controlCallback)
+    {
+        this->controlCallback(data, len, this->controlContext);
+    }
 }
 
 /**
@@ -234,9 +252,7 @@ bool SFBLE::init(void)
     BLE.onConnected(ParticleBleBackend::onConnectedStatic, &backend);
     BLE.onDisconnected(ParticleBleBackend::onDisconnectedStatic, &backend);
 
-    // Register characteristics by referencing them before advertising.
-    // Particle associates the characteristic with the given service UUID in the
-    // BleCharacteristic constructor.
+    // Ensure characteristic objects are instantiated before advertising.
     (void)backend.telemetryCharacteristic;
     (void)backend.controlCharacteristic;
 

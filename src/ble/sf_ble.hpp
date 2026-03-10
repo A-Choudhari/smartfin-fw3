@@ -8,8 +8,6 @@
 #ifndef __SF_BLE_HPP__
 #define __SF_BLE_HPP__
 
-
-
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,6 +16,7 @@
  *
  * Hides Particle BLE types from the rest of the codebase so porting to a
  * different chip requires changes mostly in the implementation file.
+ *
  * @note Current intent: peripheral role with one telemetry notify
  * characteristic and an optional control write characteristic
  * inside a single custom service.
@@ -26,7 +25,8 @@ class SFBLE
 {
 public:
     /** @brief Callback invoked on control data received. */
-    typedef void (*control_rx_callback_t)(const uint8_t* data, size_t len, void* context);
+    typedef void (*control_rx_callback_t)(const uint8_t *data, size_t len, void *context);
+
     /** @brief Callback invoked on connect/disconnect events. */
     typedef void (*connection_callback_t)(bool connected, void* context);
 
@@ -41,14 +41,12 @@ public:
 
     /**
      * @brief Start BLE advertising.
-     *
      * @return true on success, false on failure.
      */
     bool startAdvertising(void);
 
     /**
      * @brief Stop BLE advertising.
-     *
      * @return true on success, false on failure.
      */
     bool stopAdvertising(void);
@@ -63,7 +61,7 @@ public:
      * @brief Send telemetry bytes to connected central using NOTIFY.
      *
      * @param pData Pointer to telemetry payload.
-     * @param len Number of bytes to send (must be >0 and <= MAX_NOTIFY_LEN).
+     * @param len Number of bytes to send.
      * @return true on success, false on failure.
      */
     bool notifyTelemetry(const void* pData, size_t len);
@@ -83,27 +81,50 @@ public:
      * @param context User context pointer passed to the callback.
      */
     void setConnectionCallback(connection_callback_t cb, void* context);
+    /**
+     * @brief Internal helper invoked by platform backend on connect/disconnect.
+     *
+     * Updates internal state and forwards to the user callback if registered.
+     *
+     * @param isConnected true if connected, false if disconnected
+     */
+    void handleConnectionEvent(bool isConnected);
+
+    /**
+     * @brief Internal helper invoked by platform backend on control RX.
+     *
+     * Forwards received control data to the registered callback if present.
+     *
+     * @param data Pointer to received data
+     * @param len Number of bytes received
+     */
+    void handleControlEvent(const uint8_t *data, size_t len);
 
 private:
     /** @brief Private default constructor to enforce singleton. */
     SFBLE();
+
     /** @brief Deleted copy constructor (singleton). */
     SFBLE(const SFBLE&);
+
     /** @brief Deleted assignment operator (singleton). */
     SFBLE& operator=(const SFBLE&);
 
     /** @brief True after BLE stack/characteristics are initialized. */
     bool initialized;
+
     /** @brief True when a central is currently connected. */
     bool connected;
 
-    /** @brief Registered control-data callback. */
+    /** @brief Registered control data callback. */
     control_rx_callback_t controlCallback;
+
     /** @brief User context for control callback. */
     void* controlContext;
 
-    /** @brief Registered connection-state callback. */
+    /** @brief Registered connection state callback. */
     connection_callback_t connectionCallback;
+
     /** @brief User context for connection callback. */
     void* connectionContext;
 };
