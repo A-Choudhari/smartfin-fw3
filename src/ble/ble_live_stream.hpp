@@ -9,7 +9,6 @@
 
 #include "ble_config.hpp"
 #include "ble_packet_builder.hpp"
-#include "spsc_queue.hpp"
 
 #include <atomic>
 #include <cstddef>
@@ -72,7 +71,6 @@ private:
     BleLiveStream();
 
     sf::ble::transport::PacketBuilder packetBuilder_;
-    sf::util::SpscQueue<sf::ble::transport::TxPacket, SF_BLE_QUEUE_CAPACITY> txQueue_;
 
     struct TimeSyncState
     {
