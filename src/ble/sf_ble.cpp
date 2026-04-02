@@ -90,36 +90,6 @@ namespace
         }
 
         /**
-         * @brief Particle connect callback shim.
-         * @param peer Connected peer (unused).
-         * @param context Pointer to backend instance.
-         */
-        static void onConnectedStatic(const BlePeerDevice &peer, void *context)
-        {
-            (void)peer;
-            ParticleBleBackend *self = static_cast<ParticleBleBackend *>(context);
-            if (self)
-            {
-                self->onConnected();
-            }
-        }
-
-        /**
-         * @brief Particle disconnect callback shim.
-         * @param peer Disconnected peer (unused).
-         * @param context Pointer to backend instance.
-         */
-        static void onDisconnectedStatic(const BlePeerDevice &peer, void *context)
-        {
-            (void)peer;
-            ParticleBleBackend *self = static_cast<ParticleBleBackend *>(context);
-            if (self)
-            {
-                self->onDisconnected();
-            }
-        }
-
-        /**
          * @brief Particle control-write callback shim.
          * @param data Received payload.
          * @param len Number of bytes in payload.
@@ -141,8 +111,9 @@ namespace
 
         /**
          * @brief Handle Particle connect event.
+         * @param peer Connected peer (unused).
          */
-        void onConnected()
+        void onConnected(const BlePeerDevice & /*peer*/)
         {
             SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(true, &ble);
@@ -150,8 +121,9 @@ namespace
 
         /**
          * @brief Handle Particle disconnect event.
+         * @param peer Disconnected peer (unused).
          */
-        void onDisconnected()
+        void onDisconnected(const BlePeerDevice & /*peer*/)
         {
             SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(false, &ble);
@@ -273,8 +245,8 @@ bool SFBLE::init(void)
 
     BLE.on();
     BLE.setDeviceName(sf::bledefs::DEVICE_NAME);
-    BLE.onConnected(ParticleBleBackend::onConnectedStatic, &backend);
-    BLE.onDisconnected(ParticleBleBackend::onDisconnectedStatic, &backend);
+    BLE.onConnected(&ParticleBleBackend::onConnected, &backend);
+    BLE.onDisconnected(&ParticleBleBackend::onDisconnected, &backend);
 
     // Ensure characteristic objects are instantiated before advertising.
     (void)backend.telemetryCharacteristic;
