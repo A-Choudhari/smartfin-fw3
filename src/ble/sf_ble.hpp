@@ -24,10 +24,23 @@
 class SFBLE
 {
 public:
-    /** @brief Callback invoked on control data received. */
+    /**
+     * @brief Callback invoked on control data received.
+     *
+     * @param data raw payload
+     * @param len raw payload
+     * @param context lets an object pass 'this' pointer
+     * so the callback can reach instance state without a global.
+     */
     typedef void (*control_rx_callback_t)(const uint8_t *data, size_t len, void *context);
 
-    /** @brief Callback invoked on connect/disconnect events. */
+    /**
+     * @brief called when a central (watch) connects or disconnects
+     *
+     * @param connected is true on connect
+     * @param context lets an object pass 'this' pointer
+     * so the callback can reach instance state without a global.
+     */
     typedef void (*connection_callback_t)(bool connected, void* context);
 
     /** @brief Get singleton instance. */
