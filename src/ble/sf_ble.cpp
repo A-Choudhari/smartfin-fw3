@@ -34,7 +34,20 @@ namespace
     {
     public:
         /**
-         * @brief Construct BLE characteristics and hook control handler.
+         * @brief Construct and register both GATT characteristics.
+         *
+         * Particle registers a @c BleCharacteristic into the GATT server at
+         * construction time, so both characteristics must be fully described
+         * here rather than in @c init().
+         *
+         * @c telemetryCharacteristic — short name @c "tele", property NOTIFY,
+         * carries fin→watch data. No write callback; the central subscribes and
+         * receives notifications pushed by @c notifyTelemetry().
+         *
+         * @c controlCharacteristic — short name @c "ctrl", property
+         * WRITE_WO_RSP, carries watch→fin commands. Registers
+         * @c onControlReceivedStatic as the write callback with @c this as
+         * context so Particle can invoke it as a plain C function pointer.
          */
         ParticleBleBackend()
             : telemetryCharacteristic("tele",
@@ -56,7 +69,18 @@ namespace
         /** @brief Control characteristic for watch -> fin commands. */
         BleCharacteristic controlCharacteristic;
 
-        /** @brief Access singleton backend instance. */
+        /**
+         * @brief Access the singleton backend instance.
+         *
+         * A single instance is required because each @c BleCharacteristic
+         * object represents one physical GATT entry. Constructing a second
+         * instance would attempt to register duplicate characteristics and
+         * corrupt the GATT table. The static-local pattern also controls
+         * construction order: the instance is created on the first call to
+         * @c getInstance(), which happens inside @c SFBLE::init() after
+         * @c BLE.on(), guaranteeing the GATT server is live before any
+         * characteristic tries to register.
+         */
         static ParticleBleBackend &getInstance()
         {
             static ParticleBleBackend instance;
