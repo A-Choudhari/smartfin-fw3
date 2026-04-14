@@ -25,21 +25,23 @@ class SFBLE
 {
 public:
     /**
-     * @brief Callback invoked on control data received.
+     * @brief Callback invoked when the watch writes to the control characteristic.
      *
-     * @param data raw payload
-     * @param len raw payload
-     * @param context lets an object pass 'this' pointer
-     * so the callback can reach instance state without a global.
+     * @param data  Pointer to the raw bytes written by the peer.
+     * @param len   Number of bytes in @p data.
+     * @param context Caller-supplied pointer passed back verbatim; typically
+     *                @c this so the callback can reach instance state without
+     *                a global.
      */
     typedef void (*control_rx_callback_t)(const uint8_t *data, size_t len, void *context);
 
     /**
-     * @brief called when a central (watch) connects or disconnects
+     * @brief Callback invoked when a central connects or disconnects.
      *
-     * @param connected is true on connect
-     * @param context lets an object pass 'this' pointer
-     * so the callback can reach instance state without a global.
+     * @param connected  @c true on connect, @c false on disconnect.
+     * @param context Caller-supplied pointer passed back verbatim; typically
+     *                @c this so the callback can reach instance state without
+     *                a global.
      */
     typedef void (*connection_callback_t)(bool connected, void* context);
 
