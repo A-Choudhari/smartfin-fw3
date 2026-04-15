@@ -41,9 +41,10 @@ public:
     bool enqueueEnsemble(const void* pData, size_t len);
 
     /**
-     * @brief Flush the builder into the transmit queue immediately.
+     * @brief Finalize any partial packet and push it into the transmit queue.
+     * Does not send over the air — call processTx() to drain the queue to BLE.
      */
-    void flush();
+    void finalizePacket();
 
     /**
      * @brief Drain queued packets and hand them to the BLE backend.

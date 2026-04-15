@@ -78,13 +78,13 @@ bool BleLiveStream::enqueueEnsemble(const void *pData, size_t len)
     // If we exactly filled the packet, move it to the queue right away.
     if (packetBuilder_.remainingPayload() == 0)
     {
-        flush();
+        finalizePacket();
     }
 
     return true;
 }
 
-void BleLiveStream::flush()
+void BleLiveStream::finalizePacket()
 {
     if (!initialized_)
     {
