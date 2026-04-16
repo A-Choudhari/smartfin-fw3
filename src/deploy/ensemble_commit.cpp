@@ -51,7 +51,7 @@ int sf::deploy::commitEnsemble(const void *pData, std::size_t len)
             }
             else
             {
-                FLOG_AddError(FLOG_REC_COMMIT_FAIL, writeResult);
+                FLOG_AddError(FLOG_COMMIT_RECORD_FAIL, writeResult);
             }
         }
         else
