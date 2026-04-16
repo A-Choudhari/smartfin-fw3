@@ -32,7 +32,7 @@ namespace deploy
      * @brief Write and optionally stream an ensemble blob.
      * @param pData Pointer to ensemble bytes.
      * @param len Size of the ensemble in bytes.
-     * @return 0 if succesful, flog error if not
+     * @return COMMIT_OK on success, otherwise a CommitResult failure code
      */
     int commitEnsemble(const void *pData, std::size_t len);
 }
