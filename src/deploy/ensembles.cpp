@@ -372,7 +372,6 @@ void SS_ensemble08Func(DeploymentSchedule_t *pDeployment)
 #else
         ens.ensData.timestamp = 0;
 #endif
-        ens.ensData.timestamp = Time.now();
         sf::deploy::commitEnsemble(&ens, sizeof(ens));
         memset(pData, 0, sizeof(Ensemble08_eventData_t));
     }
