@@ -15,7 +15,10 @@ namespace sf
 {
 namespace deploy
 {
-
+    /**
+     * @brief Different return codes for commit ensemble.
+     *
+     */
     enum CommitResult
     {
         COMMIT_OK = 0,
