@@ -186,7 +186,7 @@ void RideTask::exit(void)
 {
     SF_OSAL_printf("Closing session" __NL__);
 #if ENABLE_STREAM_SINK
-    BleLiveStream::getInstance().flush();
+    BleLiveStream::getInstance().finalizePacket();
     BleLiveStream::getInstance().processTx();
 #endif
     pSystemDesc->pRecorder->closeSession();
