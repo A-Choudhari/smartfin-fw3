@@ -88,19 +88,6 @@ bool BleLiveStream::enqueueEnsemble(const void *pData, size_t len)
         return false;
     }
 
-    const uint32_t now = millis();
-    if ((now - lastFlushMs_) >= LOW_RATE_FLUSH_INTERVAL_MS)
-    {
-        flush();
-        lastFlushMs_ = now;
-    }
-
-    // If we exactly filled the packet, move it to the queue right away.
-    if (packetBuilder_.remainingPayload() == 0)
-    {
-        finalizePacket();
-    }
-
     return true;
 }
 
@@ -111,14 +98,7 @@ void BleLiveStream::finalizePacket()
         return;
     }
 
-    sf::ble::transport::TxPacket packet;
-    if (packetBuilder_.finalize(packet))
-    {
-        if (!TransportService::getInstance().enqueueTxPacket(packet))
-        {
-            droppedPackets_.fetch_add(1, std::memory_order_relaxed);
-        }
-    }
+    // No-op: packetBuilder_ moved to HighRateStream; shutdown() handles flushing.
 }
 
 void BleLiveStream::processTx()
