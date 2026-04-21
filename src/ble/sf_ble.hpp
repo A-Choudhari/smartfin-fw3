@@ -2,12 +2,13 @@
  * @file sf_ble.hpp
  * @brief Platform Smartfin BLE wrapper interface.
  * @author Charlie Kushelevsky (ckushelevsky@ucsd.edu)
- * @date 3-9-2026
+ * @date 2026-03-10
  */
 
 #ifndef __SF_BLE_HPP__
 #define __SF_BLE_HPP__
 
+#include <atomic>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -126,19 +127,19 @@ private:
     SFBLE& operator=(const SFBLE&);
 
     /** @brief True after BLE stack/characteristics are initialized. */
-    bool initialized;
+    std::atomic<bool> initialized;
 
     /** @brief True when a central is currently connected. */
-    bool connected;
+    std::atomic<bool> connected;
 
     /** @brief Registered control data callback. */
-    control_rx_callback_t controlCallback;
+    std::atomic<control_rx_callback_t> controlCallback;
 
     /** @brief User context for control callback. */
     void* controlContext;
 
     /** @brief Registered connection state callback. */
-    connection_callback_t connectionCallback;
+    std::atomic<connection_callback_t> connectionCallback;
 
     /** @brief User context for connection callback. */
     void* connectionContext;
