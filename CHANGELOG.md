@@ -1,3 +1,23 @@
+# [3.24.0](https://github.com/UCSD-E4E/smartfin-fw3/compare/v3.23.1...v3.24.0) (2026-04-21)
+
+
+### Bug Fixes
+
+* added forward declaration and closed open #if ([840f7b5](https://github.com/UCSD-E4E/smartfin-fw3/commit/840f7b51ad970e24205d219b261ca9f96a6f2237))
+* update BLE UUIDs and author email in sf_ble_defs.hpp ([cdc1fd8](https://github.com/UCSD-E4E/smartfin-fw3/commit/cdc1fd8bf653dd0240f7215ef120a93e089abe1a))
+
+
+### Features
+
+* add Smartfin BLE wrapper interface ([ed7bdf5](https://github.com/UCSD-E4E/smartfin-fw3/commit/ed7bdf50012e6c5d370dba1425af495f343abf7e))
+* created  definitions for BLE protocols ([0f76f53](https://github.com/UCSD-E4E/smartfin-fw3/commit/0f76f53f0b1b383d638e5321504f3df64a578d08))
+* enhance ParticleBleBackend documentation for GATT characteristics ([12624cf](https://github.com/UCSD-E4E/smartfin-fw3/commit/12624cf024739b238f31578ae8d199b24f4c4cdc))
+* enhance ParticleBleBackend documentation for GATT characteristics ([a532224](https://github.com/UCSD-E4E/smartfin-fw3/commit/a5322249f91a0c40c4e9ecebc6623c804aba243a))
+* fixed compile issues for ble base ([2d9c6a7](https://github.com/UCSD-E4E/smartfin-fw3/commit/2d9c6a73cb87756458ad6985f08a3c669e0e9a68))
+* fixed compile issues for ble base ([518939d](https://github.com/UCSD-E4E/smartfin-fw3/commit/518939d289b6d64009af83a7c7a5d3c993101466))
+* fixed compile issues for ble base ([0a946d0](https://github.com/UCSD-E4E/smartfin-fw3/commit/0a946d01c3ce0ea09ef47af095b0255fcbcef145))
+* implement Particle-backed BLE wrapper with characteristics and event handling ([209bd2b](https://github.com/UCSD-E4E/smartfin-fw3/commit/209bd2b8fcd2f10e59d601823d06be284c16c40f))
+
 ## [3.23.1](https://github.com/UCSD-E4E/smartfin-fw3/compare/v3.23.0...v3.23.1) (2026-02-09)
 
 
