@@ -7,6 +7,8 @@
 
 #include "sf_ble.hpp"
 
+#include <atomic>
+
 #include "cli/conio.hpp"
 #include "product.hpp"
 #include "sf_ble_defs.hpp"
@@ -88,36 +90,6 @@ namespace
         }
 
         /**
-         * @brief Particle connect callback shim.
-         * @param peer Connected peer (unused).
-         * @param context Pointer to backend instance.
-         */
-        static void onConnectedStatic(const BlePeerDevice &peer, void *context)
-        {
-            (void)peer;
-            ParticleBleBackend *self = static_cast<ParticleBleBackend *>(context);
-            if (self)
-            {
-                self->onConnected();
-            }
-        }
-
-        /**
-         * @brief Particle disconnect callback shim.
-         * @param peer Disconnected peer (unused).
-         * @param context Pointer to backend instance.
-         */
-        static void onDisconnectedStatic(const BlePeerDevice &peer, void *context)
-        {
-            (void)peer;
-            ParticleBleBackend *self = static_cast<ParticleBleBackend *>(context);
-            if (self)
-            {
-                self->onDisconnected();
-            }
-        }
-
-        /**
          * @brief Particle control-write callback shim.
          * @param data Received payload.
          * @param len Number of bytes in payload.
@@ -139,8 +111,9 @@ namespace
 
         /**
          * @brief Handle Particle connect event.
+         * @param peer Connected peer (unused).
          */
-        void onConnected()
+        void onConnected(const BlePeerDevice & /*peer*/)
         {
             SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(true, &ble);
@@ -148,8 +121,9 @@ namespace
 
         /**
          * @brief Handle Particle disconnect event.
+         * @param peer Disconnected peer (unused).
          */
-        void onDisconnected()
+        void onDisconnected(const BlePeerDevice & /*peer*/)
         {
             SFBLE &ble = SFBLE::getInstance();
             bleConnectionThunk(false, &ble);
@@ -228,11 +202,13 @@ SFBLE::SFBLE()
  */
 void SFBLE::handleConnectionEvent(bool isConnected)
 {
-    this->connected = isConnected;
+    this->connected.store(isConnected, std::memory_order_release);
 
-    if (this->connectionCallback)
+    auto cb  = this->connectionCallback.load(std::memory_order_acquire);
+    auto ctx = this->connectionContext;
+    if (cb)
     {
-        this->connectionCallback(isConnected, this->connectionContext);
+        cb(isConnected, ctx);
     }
 }
 
@@ -243,9 +219,11 @@ void SFBLE::handleConnectionEvent(bool isConnected)
  */
 void SFBLE::handleControlEvent(const uint8_t *data, size_t len)
 {
-    if (this->controlCallback)
+    auto cb  = this->controlCallback.load(std::memory_order_acquire);
+    auto ctx = this->controlContext;
+    if (cb)
     {
-        this->controlCallback(data, len, this->controlContext);
+        cb(data, len, ctx);
     }
 }
 
@@ -255,7 +233,7 @@ void SFBLE::handleControlEvent(const uint8_t *data, size_t len)
  */
 bool SFBLE::init(void)
 {
-    if (this->initialized)
+    if (this->initialized.load(std::memory_order_acquire))
     {
         return true;
     }
@@ -265,14 +243,14 @@ bool SFBLE::init(void)
 
     BLE.on();
     BLE.setDeviceName(sf::bledefs::DEVICE_NAME);
-    BLE.onConnected(ParticleBleBackend::onConnectedStatic, &backend);
-    BLE.onDisconnected(ParticleBleBackend::onDisconnectedStatic, &backend);
+    BLE.onConnected(&ParticleBleBackend::onConnected, &backend);
+    BLE.onDisconnected(&ParticleBleBackend::onDisconnected, &backend);
 
     // Ensure characteristic objects are instantiated before advertising.
     (void)backend.telemetryCharacteristic;
     (void)backend.controlCharacteristic;
 
-    this->initialized = true;
+    this->initialized.store(true, std::memory_order_release);
     return true;
 #else
     return false;
@@ -285,7 +263,7 @@ bool SFBLE::init(void)
  */
 bool SFBLE::startAdvertising(void)
 {
-    if (!this->initialized)
+    if (!this->initialized.load(std::memory_order_acquire))
     {
         return false;
     }
@@ -306,7 +284,7 @@ bool SFBLE::startAdvertising(void)
  */
 bool SFBLE::stopAdvertising(void)
 {
-    if (!this->initialized)
+    if (!this->initialized.load(std::memory_order_acquire))
     {
         return false;
     }
@@ -325,7 +303,7 @@ bool SFBLE::stopAdvertising(void)
  */
 bool SFBLE::isConnected(void) const
 {
-    return this->connected;
+    return this->connected.load(std::memory_order_acquire);
 }
 
 /**
@@ -336,7 +314,8 @@ bool SFBLE::isConnected(void) const
  */
 bool SFBLE::notifyTelemetry(const void *pData, size_t len)
 {
-    if (!this->initialized || !this->connected || !pData)
+    if (!this->initialized.load(std::memory_order_acquire) ||
+        !this->connected.load(std::memory_order_acquire) || !pData)
     {
         return false;
     }
@@ -361,8 +340,8 @@ bool SFBLE::notifyTelemetry(const void *pData, size_t len)
  */
 void SFBLE::setControlCallback(control_rx_callback_t cb, void *context)
 {
-    this->controlCallback = cb;
     this->controlContext = context;
+    this->controlCallback.store(cb, std::memory_order_release);
 }
 
 /**
@@ -372,6 +351,6 @@ void SFBLE::setControlCallback(control_rx_callback_t cb, void *context)
  */
 void SFBLE::setConnectionCallback(connection_callback_t cb, void *context)
 {
-    this->connectionCallback = cb;
     this->connectionContext = context;
+    this->connectionCallback.store(cb, std::memory_order_release);
 }
