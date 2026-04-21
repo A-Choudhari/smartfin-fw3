@@ -7,8 +7,8 @@
 #ifndef __ENSEMBLE_COMMIT_HPP__
 #define __ENSEMBLE_COMMIT_HPP__
 
-
 #include <cstdint>
+#include <cstddef>
 
 
 namespace sf
@@ -29,7 +29,7 @@ namespace deploy
         COMMIT_NO_SINKS_ENABLED,
     };
     /**
-     * @brief Write and optionally stream an ensemble blob.
+     * @brief Enqueue an ensemble blob to enabled sinks (recorder/stream).
      * @param pData Pointer to ensemble bytes.
      * @param len Size of the ensemble in bytes.
      * @return COMMIT_OK on success, otherwise a CommitResult failure code
