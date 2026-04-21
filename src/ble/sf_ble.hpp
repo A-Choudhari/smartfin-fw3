@@ -133,13 +133,13 @@ private:
     std::atomic<bool> connected;
 
     /** @brief Registered control data callback. */
-    control_rx_callback_t controlCallback;
+    std::atomic<control_rx_callback_t> controlCallback;
 
     /** @brief User context for control callback. */
     void* controlContext;
 
     /** @brief Registered connection state callback. */
-    connection_callback_t connectionCallback;
+    std::atomic<connection_callback_t> connectionCallback;
 
     /** @brief User context for connection callback. */
     void* connectionContext;

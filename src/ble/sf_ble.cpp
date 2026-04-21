@@ -204,8 +204,7 @@ void SFBLE::handleConnectionEvent(bool isConnected)
 {
     this->connected.store(isConnected, std::memory_order_release);
 
-    std::atomic_thread_fence(std::memory_order_acquire);
-    auto cb  = this->connectionCallback;
+    auto cb  = this->connectionCallback.load(std::memory_order_acquire);
     auto ctx = this->connectionContext;
     if (cb)
     {
@@ -220,8 +219,7 @@ void SFBLE::handleConnectionEvent(bool isConnected)
  */
 void SFBLE::handleControlEvent(const uint8_t *data, size_t len)
 {
-    std::atomic_thread_fence(std::memory_order_acquire);
-    auto cb  = this->controlCallback;
+    auto cb  = this->controlCallback.load(std::memory_order_acquire);
     auto ctx = this->controlContext;
     if (cb)
     {
@@ -342,9 +340,8 @@ bool SFBLE::notifyTelemetry(const void *pData, size_t len)
  */
 void SFBLE::setControlCallback(control_rx_callback_t cb, void *context)
 {
-    this->controlCallback = cb;
     this->controlContext = context;
-    std::atomic_thread_fence(std::memory_order_release);
+    this->controlCallback.store(cb, std::memory_order_release);
 }
 
 /**
@@ -354,7 +351,6 @@ void SFBLE::setControlCallback(control_rx_callback_t cb, void *context)
  */
 void SFBLE::setConnectionCallback(connection_callback_t cb, void *context)
 {
-    this->connectionCallback = cb;
     this->connectionContext = context;
-    std::atomic_thread_fence(std::memory_order_release);
+    this->connectionCallback.store(cb, std::memory_order_release);
 }
