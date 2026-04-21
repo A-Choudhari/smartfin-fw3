@@ -16,6 +16,8 @@
 #include "system.hpp"
 #include "util.hpp"
 #include "vers.hpp"
+#include "ble/high_rate_stream.hpp"
+#include "ble/ble_live_stream.hpp"
 
 #include <cmath>
 #if SF_PLATFORM == SF_PLATFORM_PARTICLE
@@ -186,11 +188,15 @@ void SS_ensemble10Func(DeploymentSchedule_t *pDeployment)
 #if SF_PLATFORM == SF_PLATFORM_PARTICLE
     float temp = NAN;
     uint8_t water = UINT8_MAX;
+#if SF_ENABLE_GPS
     int32_t lat = INT32_MAX, lng = INT32_MAX;
+#endif
     float accelData[3] = {NAN, NAN, NAN};
     float gyroData[3] = {NAN, NAN, NAN};
     float magData[3] = {NAN, NAN, NAN};
+#if SF_ENABLE_GPS
     bool hasGPS = false;
+#endif
     Ensemble10_eventData_t *pData = (Ensemble10_eventData_t *)pDeployment->state.pData;
 
 #pragma pack(push, 1)
@@ -244,9 +250,11 @@ void SS_ensemble10Func(DeploymentSchedule_t *pDeployment)
     pData->mag[0] += magData[0];
     pData->mag[1] += magData[1];
     pData->mag[2] += magData[2];
+#if SF_ENABLE_GPS
     pData->location[0] += lat;
     pData->location[1] += lng;
     pData->hasGPS += hasGPS ? 1 : 0;
+#endif
     pData->accumulateCount++;
 
     // Report accumulated measurements
@@ -274,6 +282,7 @@ void SS_ensemble10Func(DeploymentSchedule_t *pDeployment)
         ensData.data.ens10.rawMagField[0] = (pData->mag[0] / pDeployment->measurementsToAccumulate);
         ensData.data.ens10.rawMagField[1] = (pData->mag[1] / pDeployment->measurementsToAccumulate);
         ensData.data.ens10.rawMagField[2] = (pData->mag[2] / pDeployment->measurementsToAccumulate);
+#if SF_ENABLE_GPS
         ensData.data.ens11.location[0] =
             (pData->location[0] / pDeployment->measurementsToAccumulate);
         ensData.data.ens11.location[1] =
@@ -286,6 +295,7 @@ void SS_ensemble10Func(DeploymentSchedule_t *pDeployment)
                                        sizeof(EnsembleHeader_t) + sizeof(Ensemble11_data_t));
         }
         else
+#endif
         {
             ensData.header.ensembleType = ENS_TEMP_IMU;
             sf::deploy::commitEnsemble(&ensData,
@@ -364,7 +374,9 @@ void SS_ensemble08Func(DeploymentSchedule_t *pDeployment)
         ens.header.ensembleType = ENS_TEMP_TIME;
         ens.ensData.scaled_temp = (temp * Q7_SCALAR);
         ens.ensData.water = water;
-        ens.ensData.timestamp = Time.now();
+
+        uint32_t unixEstimate = BleLiveStream::getInstance().estimateUnixTime(millis());
+        ens.ensData.timestamp = unixEstimate; // 0 indicates unsynced
         sf::deploy::commitEnsemble(&ens, sizeof(ens));
         memset(pData, 0, sizeof(Ensemble08_eventData_t));
     }
@@ -406,15 +418,24 @@ void SS_fwVerFunc(DeploymentSchedule_t *pDeployment)
     ens.header.elapsedTime_ds = Ens_getStartTime();
     ens.header.ensembleType = ENS_TEXT;
 
-    ens.nChars = snprintf(ens.verBuf,
-                          32,
-                          "FW%d.%d.%d%s",
-                          FW_MAJOR_VERSION,
-                          FW_MINOR_VERSION,
-                          FW_BUILD_NUM,
-                          FW_BRANCH);
-    sf::deploy::commitEnsemble(&ens, 
-            sizeof(EnsembleHeader_t) + sizeof(uint8_t) + ens.nChars);
+    int n = snprintf(ens.verBuf,
+                     32,
+                     "FW%d.%d.%d%s",
+                     FW_MAJOR_VERSION,
+                     FW_MINOR_VERSION,
+                     FW_BUILD_NUM,
+                     FW_BRANCH);
+    if (n < 0)
+    {
+        n = 0;
+    }
+    if (n > 31)
+    {
+        n = 31;
+    }
+    ens.nChars = static_cast<uint8_t>(n);
+    sf::deploy::commitEnsemble(&ens,
+                               sizeof(EnsembleHeader_t) + sizeof(uint8_t) + ens.nChars);
 }
 /** @} */
 
@@ -467,7 +488,10 @@ void SS_HighRateIMU_x0C_Func(DeploymentSchedule_t *pDeployment)
     ensData.header.ensembleType = ENS_TEMP_HIGH_DATA_RATE_IMU;
     ensData.header.elapsedTime_ds = Ens_getStartTime();
 
-    sf::deploy::commitEnsemble(&ensData, sizeof(EnsembleHeader_t) + sizeof(Ensemble12_data_t));
+    HighRateImuRecord record;
+    record.header = ensData.header;
+    record.data = ensData.data;
+    TransportService::getInstance().enqueueImuRecord(record);
 
 #endif
 }
